@@ -43,28 +43,48 @@
 			<ul class="pagination">
 				<li class="page-item" th:classappend="${currentPage == 1} ? 'disabled'">
 					<a class="page-link"
-					   th:with="pageUrl=${#strings.isEmpty(searchLastName) ? '/owners?page=1' : '/owners?page=1&lastName=' + searchLastName}"
+					   th:with="pageUrl=${(#strings.isEmpty(searchLastName) and #strings.isEmpty(searchCity))
+							? '/owners?page=1'
+							: (#strings.isEmpty(searchCity)
+								? '/owners?page=1&lastName=' + searchLastName
+								: '/owners?page=1&lastName=' + searchLastName + '&city=' + searchCity)}"
 					   th:href="@{${pageUrl}}">First</a>
 				</li>
 				<li class="page-item" th:classappend="${currentPage == 1} ? 'disabled'">
 					<a class="page-link"
-					   th:with="pageUrl=${#strings.isEmpty(searchLastName) ? '/owners?page=' + (${currentPage} - 1) : '/owners?page=' + (${currentPage} - 1) + '&lastName=' + searchLastName}"
+					   th:with="pageUrl=${(#strings.isEmpty(searchLastName) and #strings.isEmpty(searchCity))
+							? '/owners?page=' + (${currentPage} - 1)
+							: (#strings.isEmpty(searchCity)
+								? '/owners?page=' + (${currentPage} - 1) + '&lastName=' + searchLastName
+								: '/owners?page=' + (${currentPage} - 1) + '&lastName=' + searchLastName + '&city=' + searchCity)}"
 					   th:href="@{${pageUrl}}">Previous</a>
 				</li>
 				<li class="page-item" th:each="i : ${#numbers.sequence(1, totalPages)}"
 					th:classappend="${currentPage == i} ? 'active'">
 					<a class="page-link"
-					   th:with="pageUrl=${#strings.isEmpty(searchLastName) ? '/owners?page=' + ${i} : '/owners?page=' + ${i} + '&lastName=' + searchLastName}"
+					   th:with="pageUrl=${(#strings.isEmpty(searchLastName) and #strings.isEmpty(searchCity))
+							? '/owners?page=' + ${i}
+							: (#strings.isEmpty(searchCity)
+								? '/owners?page=' + ${i} + '&lastName=' + searchLastName
+								: '/owners?page=' + ${i} + '&lastName=' + searchLastName + '&city=' + searchCity)}"
 					   th:href="@{${pageUrl}}" th:text="${i}"></a>
 				</li>
 				<li class="page-item" th:classappend="${currentPage == totalPages} ? 'disabled'">
 					<a class="page-link"
-					   th:with="pageUrl=${#strings.isEmpty(searchLastName) ? '/owners?page=' + (${currentPage} + 1) : '/owners?page=' + (${currentPage} + 1) + '&lastName=' + searchLastName}"
+					   th:with="pageUrl=${(#strings.isEmpty(searchLastName) and #strings.isEmpty(searchCity))
+							? '/owners?page=' + (${currentPage} + 1)
+							: (#strings.isEmpty(searchCity)
+								? '/owners?page=' + (${currentPage} + 1) + '&lastName=' + searchLastName
+								: '/owners?page=' + (${currentPage} + 1) + '&lastName=' + searchLastName + '&city=' + searchCity)}"
 					   th:href="@{${pageUrl}}">Next</a>
 				</li>
 				<li class="page-item" th:classappend="${currentPage == totalPages} ? 'disabled'">
 					<a class="page-link"
-					   th:with="pageUrl=${#strings.isEmpty(searchLastName) ? '/owners?page=' + ${totalPages} : '/owners?page=' + ${totalPages} + '&lastName=' + searchLastName}"
+					   th:with="pageUrl=${(#strings.isEmpty(searchLastName) and #strings.isEmpty(searchCity))
+							? '/owners?page=' + ${totalPages}
+							: (#strings.isEmpty(searchCity)
+								? '/owners?page=' + ${totalPages} + '&lastName=' + searchLastName
+								: '/owners?page=' + ${totalPages} + '&lastName=' + searchLastName + '&city=' + searchCity)}"
 					   th:href="@{${pageUrl}}">Last</a>
 				</li>
 			</ul>
