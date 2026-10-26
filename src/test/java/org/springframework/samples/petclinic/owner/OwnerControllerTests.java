@@ -117,6 +117,39 @@ class OwnerControllerTests {
 	}
 
 	@Test
+	void testProcessFindFormWithCityAndLastNameFilters() throws Exception {
+		Owner owner = new Owner();
+		owner.setId(1);
+		owner.setFirstName("Betty");
+		owner.setLastName("Davis");
+		owner.setCity("Madison");
+
+		Page<Owner> ownersResults = new PageImpl<>(Collections.singletonList(owner), PageRequest.of(0, 5), 6);
+		given(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Davis"), eq("Madison"), any(Pageable.class)))
+			.willReturn(ownersResults);
+
+		mockMvc.perform(get("/owners").param("lastName", "Davis").param("city", "Madison"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attribute("searchLastName", "Davis"))
+			.andExpect(model().attribute("searchCity", "Madison"))
+			.andExpect(content().string(Matchers.containsString("city=Madison")))
+			.andExpect(content().string(Matchers.containsString("lastName=Davis")));
+	}
+
+	@Test
+	void testProcessFindFormWithCityNoResultsReturnsFindOwnersWithNotFoundError() throws Exception {
+		Page<Owner> ownersResults = Page.empty();
+		given(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq(""), eq("NonexistentCity"), any(Pageable.class)))
+			.willReturn(ownersResults);
+
+		mockMvc.perform(get("/owners").param("city", "NonexistentCity"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/findOwners"))
+			.andExpect(model().attributeHasFieldErrors("owner", "lastName"));
+	}
+
+	@Test
 	void testShowOwner() throws Exception {
 		given(this.owners.findById(1)).willReturn(new Owner());
 		mockMvc.perform(get("/owners/1")).andExpect(status().isOk()).andExpect(model().attributeExists("owner"))
