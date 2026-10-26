@@ -17,6 +17,7 @@ package org.springframework.samples.petclinic.owner;
 
 import java.util.Collections;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,7 +81,7 @@ class OwnerControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"))
 			.andExpect(model().attribute("searchLastName", "Fra"))
-			.andExpect(content().string(org.hamcrest.Matchers.containsString("lastName=Fra")));
+			.andExpect(content().string(Matchers.containsString("lastName=Fra")));
 	}
 
 	@Test
@@ -96,7 +97,7 @@ class OwnerControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"))
 			.andExpect(model().attribute("searchLastName", ""))
-			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("lastName="))));
+			.andExpect(content().string(Matchers.not(Matchers.containsString("lastName="))));
 	}
 
 	@Test
@@ -112,7 +113,7 @@ class OwnerControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"))
 			.andExpect(model().attribute("searchLastName", "Fra"))
-			.andExpect(content().string(org.hamcrest.Matchers.containsString("lastName=Fra")));
+			.andExpect(content().string(Matchers.containsString("lastName=Fra")));
 	}
 
 	@Test
