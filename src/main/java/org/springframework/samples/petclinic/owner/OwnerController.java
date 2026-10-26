@@ -64,19 +64,31 @@ class OwnerController {
 
 	@GetMapping
 	public String processFindForm(Owner owner, BindingResult result, Model model, @RequestParam(defaultValue = "1") int page) {
-		// allow parameterless GET request for /owners to return all records
 		String lastName = owner.getLastName();
 		if (lastName == null) {
 			lastName = "";
 		}
 		lastName = lastName.trim();
-		model.addAttribute("lastName", lastName);
 
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
+		String city = owner.getCity();
+		if (city == null) {
+			city = "";
+		}
+		city = city.trim();
+
+		model.addAttribute("lastName", lastName);
+		model.addAttribute("city", city);
+
+		Page<Owner> ownersResults = findPaginatedForOwnersFilters(page, lastName, city);
 
 		if (ownersResults.isEmpty()) {
 			// no owners found
-			result.rejectValue("lastName", "notFound", "not found");
+			if (!lastName.isBlank()) {
+				result.rejectValue("lastName", "notFound", "not found");
+			}
+			else {
+				result.rejectValue("city", "notFound", "not found");
+			}
 			return "owners/findOwners";
 		}
 
@@ -88,10 +100,14 @@ class OwnerController {
 
 		int totalPages = ownersResults.getTotalPages();
 		if (page > totalPages) {
+			StringBuilder redirect = new StringBuilder("redirect:/owners?page=1");
 			if (!lastName.isBlank()) {
-				return "redirect:/owners?page=1&lastName=" + lastName;
+				redirect.append("&lastName=").append(lastName);
 			}
-			return "redirect:/owners?page=1";
+			if (!city.isBlank()) {
+				redirect.append("&city=").append(city);
+			}
+			return redirect.toString();
 		}
 
 		model.addAttribute("listOwners", ownersResults.getContent());
@@ -100,10 +116,19 @@ class OwnerController {
 		return "owners/ownersList";
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastName) {
+	private Page<Owner> findPaginatedForOwnersFilters(int page, String lastName, String city) {
 		int pageSize = 5;
 		PageRequest pageRequest = PageRequest.of(page - 1, pageSize);
 
+		boolean hasLastName = !lastName.isBlank();
+		boolean hasCity = !city.isBlank();
+
+		if (hasLastName && hasCity) {
+			return owners.findByLastNameStartingWithAndCityIgnoreCase(lastName, city, pageRequest);
+		}
+		if (hasCity) {
+			return owners.findByCityIgnoreCase(city, pageRequest);
+		}
 		return owners.findByLastNameStartingWith(lastName, pageRequest);
 	}
 
