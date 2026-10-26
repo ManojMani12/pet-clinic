@@ -20,6 +20,7 @@ import java.util.Collection;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -51,9 +52,12 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
+	private final int ownersPageSize;
+
 	@Autowired
-	public OwnerController(OwnerRepository clinicService) {
+	public OwnerController(OwnerRepository clinicService, @Value("${petclinic.owners.pageSize:5}") int ownersPageSize) {
 		this.owners = clinicService;
+		this.ownersPageSize = ownersPageSize > 0 ? ownersPageSize : 5;
 	}
 
 	@ModelAttribute("owner")
@@ -96,8 +100,7 @@ class OwnerController {
 	}
 
 	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastName) {
-		int pageSize = 5;
-		Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by("lastName").ascending());
+		Pageable pageable = PageRequest.of(page - 1, ownersPageSize, Sort.by("lastName").ascending());
 		return owners.findByLastNameStartingWith(lastName, pageable);
 	}
 
@@ -152,7 +155,6 @@ class OwnerController {
 		redirectAttributes.addFlashAttribute("message", "Owner Values Updated");
 		return "redirect:/owners/{ownerId}";
 	}
-
 
 	@GetMapping("*")
 	public String crashTest() {
