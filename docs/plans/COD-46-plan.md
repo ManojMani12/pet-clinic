@@ -1,88 +1,64 @@
 # COD-46 Implementation Plan — Owner search improvements
 
-## 1) Summary / scope / links
-- Goal: improve Owner search UX by (1) preserving criteria across pagination, (2) adding City filter slice, and (3) making page size configurable.
-- In scope: `OwnerController` search flow, `OwnerRepository` query support, Thymeleaf templates `findOwners` and `ownersList`, controller tests.
-- Out of scope: owner create/edit/details flows; non-owner modules; telephone/firstName filters; sorting changes (unless required for correctness).
+## 1) Summary / Scope / Links
+- Goal: improve Owner search results by preserving criteria across pagination, adding city filter, and adding results context + pageSize.
+- In scope: `/owners/find`, `/owners` search handler, `ownersList.html` paging links and criteria display, repository query updates, MVC tests.
+- Out of scope: other modules (pets, visits), sorting, fuzzy search/autocomplete.
 - Epic: https://manoj16239.atlassian.net/browse/COD-46
-- FRD: https://manoj16239.atlassian.net/wiki/spaces/CodAI/pages/27394050/FRD+-+COD-46+-+Owner+search+improvements
+- FRD: https://manoj16239.atlassian.net/wiki/spaces/CodAI/pages/27394050
 
 ## 2) Delivery order (respecting blockers)
 | Order | Story | Title | Points | Blocked by |
 |---:|---|---|---:|---|
-| 1 | COD-47 | Preserve owner last-name filter in pagination links | 1 | - |
-| 2 | COD-48 | Add city filter to Owner search (first slice) | (not set) | COD-47 |
-| 3 | COD-49 | Make Owner search page size configurable | (not set) | COD-47 |
+| 1 | COD-28 | Preserve lastName filter across Owner search pagination | 2 | - |
+| 2 | COD-31 | Add city filter to Owner search | 3 | COD-28 |
+| 3 | COD-32 | Improve Owner search pagination context and controls | 3 | COD-28 |
 
 ## 3) Story plans
 
-### COD-47
-- AC recap: pagination links (first/prev/next/last + page numbers) keep `lastName`; out-of-range redirect keeps `lastName`.
-- Affected files:
-  - `src/main/resources/templates/owners/ownersList.html`
-  - `src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java`
-  - `src/test/java/org/springframework/samples/petclinic/owner/OwnerControllerTests.java`
-- Sub-tasks by layer:
-  - UI: add `lastName` as query param in all paging URLs (likely via `@{/owners(...)} ` syntax) and ensure links use the same binding name used by the controller.
-  - Controller: ensure model contains the active `lastName` value for rendering (e.g., set `model.addAttribute("lastName", lastName)` alongside pagination attrs) and keep redirect attributes consistent.
-  - Tests: extend MVC tests to validate generated paging links include `lastName` (and that repository call is still made with the same criteria).
-- Tests per AC:
-  - AC-1/2: controller/view test asserting HTML contains page links with `lastName=`.
-  - AC-3: existing redirect test should be updated/confirmed to include `lastName` in redirect URL.
+### COD-28
+- AC recap: paging links keep `lastName` when present; when unfiltered, no empty `lastName` param; first/last also preserve filter.
+- Affected files: `src/main/resources/templates/owners/ownersList.html`, `src/main/java/.../owner/OwnerController.java`, `src/test/java/.../owner/OwnerControllerTests.java`.
+- UI: update all paging `th:href` to include `lastName` only when non-blank (e.g., conditional param assembly).
+- Controller: ensure model includes current `lastName` for list view (so template can render links); keep existing redirect out-of-range behavior.
+- Tests: MVC tests for `/owners?page=2&lastName=...` staying filtered and model includes `lastName`; verify page links rendered with `lastName` when set.
 
-### COD-48
-- AC recap: add City input; trim/blank treated as not provided; paging preserves both `lastName` and `city`.
-- Affected files:
-  - `src/main/resources/templates/owners/findOwners.html`
-  - `src/main/resources/templates/owners/ownersList.html`
-  - `src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java`
-  - `src/main/java/org/springframework/samples/petclinic/owner/OwnerRepository.java`
-  - `src/test/java/org/springframework/samples/petclinic/owner/OwnerControllerTests.java`
-- Sub-tasks by layer:
-  - UI: add City field (bind to `Owner.city`); ensure form submits `city` and results page keeps it in pagination links.
-  - Controller: read/trim `city`; define “not provided” rule; pass both criteria to repository query.
-  - Repository: add a query method supporting `lastName` + `city` (semantics per FRD open question; implement as starts-with or contains). Maintain existing lastName-only path when city absent to avoid behavior regressions.
-  - Tests: add MVC tests for city filtering + whitespace handling; add paging link assertions include both params.
-- Tests per AC:
-  - AC-1: MVC test verifying repository called with expected criteria when city is provided.
-  - AC-2: MVC test verifying whitespace city does not affect behavior (falls back to lastName-only query).
-  - AC-3: MVC test verifying generated paging links include both `lastName` and `city`.
+### COD-31
+- AC recap: add optional `city` filter (alone or with lastName); no-results shows error on find view; paging preserves `city` (+ `lastName`).
+- Affected files: `src/main/resources/templates/owners/findOwners.html`, `src/main/resources/templates/owners/ownersList.html`, `src/main/java/.../owner/OwnerController.java`, `src/main/java/.../owner/OwnerRepository.java`, `src/test/java/.../owner/OwnerControllerTests.java`.
+- UI: add `city` input bound to Owner (or separate request param) and submit via GET; ensure it round-trips in list paging links.
+- Repo: add a query method supporting city + lastName (AND). City matching semantics TBD (open question); implement consistent with decision.
+- Controller: normalize both params (trim; treat null/blank as empty); choose repository method based on which fields present.
+- Tests: MVC tests for city-only, lastName+city, and no-results city; paging links include `city` (and lastName when set).
 
-### COD-49
-- AC recap: page size comes from config (not hard-coded 5); invalid config falls back safely.
-- Affected files (expected):
-  - `src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java`
-  - `src/main/resources/application.properties` (or `application.yml`) (Assumption)
-  - `src/test/java/org/springframework/samples/petclinic/owner/OwnerControllerTests.java`
-- Sub-tasks by layer:
-  - Config: introduce property key (e.g., `petclinic.owner.search.pageSize`) and read it via `@Value` or `@ConfigurationProperties`.
-  - Controller: replace `int pageSize = 5` with configured value; validate positive; apply default when invalid/missing.
-  - Tests: add/adjust test context to supply property override; assert Pageable size passed to repository equals configured value; add a negative/zero property case if feasible.
-- Tests per AC:
-  - AC-1/2: MVC test verifying `PageRequest` size equals configured property.
-  - AC-3: MVC test verifying fallback behavior when property invalid.
+### COD-32
+- AC recap: results page displays applied criteria; supports `pageSize` param (valid range), persists across paging; invalid pageSize falls back to default 5.
+- Affected files: `src/main/resources/templates/owners/ownersList.html`, `src/main/java/.../owner/OwnerController.java`, (optional) `src/main/resources/application.properties`, `src/test/java/.../owner/OwnerControllerTests.java`.
+- Controller: accept `pageSize` request param; validate numeric + bounds (assumption: allowed {5,10,20} or min/max); apply to PageRequest; fall back to 5 on invalid.
+- UI: show criteria summary (e.g., lastName/city or “All owners”); add page-size selector that submits with criteria; ensure all paging links preserve `pageSize`.
+- Tests: unit/MVC tests for pageSize affects PageRequest, invalid pageSize defaults, and rendered links keep `pageSize` + criteria.
 
-## 4) Branch and commit strategy
-- Plan branch (this PR): `plan/COD-46-implementation-plan`.
-- Implementation branch (for dev work): `feature/COD-46-owner-search`.
-- Commits: one commit per Story, prefixed with story key (e.g., `COD-47: preserve criteria in paging links`).
-- PRs: one code PR for the Epic (can be merged story-by-story via commits), referencing this plan PR.
+## 4) Branch / commit strategy
+- Plan branch: `plan/COD-46-implementation-plan` (this PR only contains the plan file).
+- Implementation branch: `feature/COD-46-owner-search`.
+- Commits: one commit per Story, prefixed with key (e.g., `COD-28: preserve lastName in paging links`).
+- PRs: one implementation PR for all three stories (unless review size requires split).
 
-## 5) Build / run / health check
-- Build: `./mvnw -q -DskipTests=false test`.
-- Run locally: `./mvnw spring-boot:run` then open `http://localhost:8080`.
-- Manual check: Owners → Find Owners; search `lastName=...` then page Next/Prev; verify query params remain; verify City filter once implemented.
+## 5) Build, local run, and health check
+- Build/tests: `./mvnw test` (or `mvn test`).
+- Run app: `./mvnw spring-boot:run`.
+- Manual check: open `/owners/find`, search with `lastName=Franklin`, verify paging keeps filter; repeat with `city`; verify pageSize changes items per page.
 
 ## 6) Risks
-- Risk: URL param names mismatch between form binding and pagination links (Owner model vs explicit params). Owner: Tech Lead.
-- Risk: City match semantics ambiguity (starts-with vs contains, case sensitivity) could cause failing expectations. Owner: Product Owner.
-- Risk: Adding new repository query method may change behavior when lastName blank (broad search) if not carefully handled. Owner: Developer.
+- Risk (Tech Lead): City matching semantics not finalized (exact vs startsWith/contains) can cause rework; mitigate by confirming before repository method is chosen.
+- Risk (QA): Thymeleaf URL composition errors may drop params on some links (first/last/prev/next); mitigate with template-based assertions in MVC tests.
+- Risk (Dev): Adding `pageSize` can create edge cases with out-of-range pages; mitigate by reusing existing redirect-to-page-1 logic while preserving params.
 
 ## 7) Definition of Done & approval gates
-- DoD: ACs met; MVC tests updated/added; `mvn test` green; no regressions in owner flows.
-- Gates: Plan PR approved → (optional) design note in Confluence → Code PR opened → Code review → CI tests pass → Merge → Docs updated (if new config property).
+- DoD: all ACs pass via automated tests; no regression in existing owner search flows; templates render correctly; PR reviewed and approved.
+- Gates: Plan PR approved → (optional) design note in Confluence updated → Code PR opened → Review → CI green → Manual smoke (owners search) → Merge.
 
-## 8) Assumptions & open questions
-- Confirm City matching rule (starts-with vs contains; case sensitivity) before implementing COD-48.
-- Decide property key name and whether size can be overridden by request param (FRD notes optional); plan assumes configuration-only unless clarified.
-- Assumption: config lives in `src/main/resources/application.properties` (verify in repo).
+## 8) Assumptions / Open questions
+- Open: City matching rule (exact vs startsWith vs contains; case sensitivity). FRD defaults to exact unless PO specifies otherwise.
+- Assumption: When both `lastName` and `city` provided, filtering is AND.
+- Assumption: pageSize allowed set/range will be defined (proposal: min 5, max 50, default 5).
