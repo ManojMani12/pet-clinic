@@ -69,6 +69,35 @@ class OwnerControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"))
 			.andExpect(model().attribute("lastName", "Franklin"))
+			.andExpect(model().attribute("city", ""))
+			.andExpect(model().attribute("currentPage", 1))
+			.andExpect(model().attribute("totalPages", 4));
+	}
+
+	@Test
+	void testProcessFindFormByCity() throws Exception {
+		Page<Owner> page = new PageImpl<>(List.of(new Owner(), new Owner(), new Owner()), PageRequest.of(0, TEST_PAGE_SIZE), 10);
+		given(this.owners.findByCityIgnoreCase(eq("Madison"), any(PageRequest.class))).willReturn(page);
+
+		mockMvc.perform(get("/owners").param("city", "Madison").param("page", "1"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attribute("lastName", ""))
+			.andExpect(model().attribute("city", "Madison"))
+			.andExpect(model().attribute("currentPage", 1))
+			.andExpect(model().attribute("totalPages", 4));
+	}
+
+	@Test
+	void testProcessFindFormByLastNameAndCity() throws Exception {
+		Page<Owner> page = new PageImpl<>(List.of(new Owner(), new Owner(), new Owner()), PageRequest.of(0, TEST_PAGE_SIZE), 10);
+		given(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fr"), eq("Madison"), any(PageRequest.class))).willReturn(page);
+
+		mockMvc.perform(get("/owners").param("lastName", "Fr").param("city", "Madison").param("page", "1"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attribute("lastName", "Fr"))
+			.andExpect(model().attribute("city", "Madison"))
 			.andExpect(model().attribute("currentPage", 1))
 			.andExpect(model().attribute("totalPages", 4));
 	}
@@ -82,6 +111,18 @@ class OwnerControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(model().attributeHasFieldErrors("owner", "lastName"))
 			.andExpect(model().attributeFieldErrorCode("owner", "lastName", "notFound"))
+			.andExpect(view().name("owners/findOwners"));
+	}
+
+	@Test
+	void testProcessFindFormNoOwnersFoundByCity() throws Exception {
+		given(this.owners.findByCityIgnoreCase(eq("NoSuchCity"), any(PageRequest.class)))
+			.willReturn(new PageImpl<>(Collections.emptyList()));
+
+		mockMvc.perform(get("/owners").param("city", "NoSuchCity"))
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasFieldErrors("owner", "city"))
+			.andExpect(model().attributeFieldErrorCode("owner", "city", "notFound"))
 			.andExpect(view().name("owners/findOwners"));
 	}
 
@@ -110,14 +151,27 @@ class OwnerControllerTests {
 	}
 
 	@Test
-	void shouldReturnOwnersListForSubsequentPageWithLastNameFilter() throws Exception {
-		Page<Owner> page2 = new PageImpl<>(List.of(new Owner(), new Owner()), PageRequest.of(1, TEST_PAGE_SIZE), 7);
-		given(this.owners.findByLastNameStartingWith(eq("Fr"), any(PageRequest.class))).willReturn(page2);
+	void shouldRedirectToFirstPageWhenOutOfRangeAndRetainLastNameAndCity() throws Exception {
+		Page<Owner> page = new PageImpl<>(List.of(new Owner(), new Owner(), new Owner()), PageRequest.of(0, TEST_PAGE_SIZE), 6);
+		given(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fr"), eq("Madison"), any(PageRequest.class)))
+			.willReturn(page);
 
-		mockMvc.perform(get("/owners").param("lastName", "Fr").param("page", "2"))
+		mockMvc.perform(get("/owners").param("lastName", "Fr").param("city", "Madison").param("page", "99"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/owners?page=1&lastName=Fr&city=Madison"));
+	}
+
+	@Test
+	void shouldReturnOwnersListForSubsequentPageWithLastNameAndCityFilter() throws Exception {
+		Page<Owner> page2 = new PageImpl<>(List.of(new Owner(), new Owner()), PageRequest.of(1, TEST_PAGE_SIZE), 7);
+		given(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fr"), eq("Madison"), any(PageRequest.class)))
+			.willReturn(page2);
+
+		mockMvc.perform(get("/owners").param("lastName", "Fr").param("city", "Madison").param("page", "2"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"))
 			.andExpect(model().attribute("lastName", "Fr"))
+			.andExpect(model().attribute("city", "Madison"))
 			.andExpect(model().attribute("currentPage", 2))
 			.andExpect(model().attribute("totalPages", 4));
 	}
