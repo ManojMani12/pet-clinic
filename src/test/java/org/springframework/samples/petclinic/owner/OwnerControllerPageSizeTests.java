@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,11 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.TestPropertySource;
@@ -47,19 +51,50 @@ class OwnerControllerPageSizeTests {
 	private OwnerRepository owners;
 
 	@Test
-	void shouldUseConfiguredPageSize() throws Exception {
-		List<Owner> ownersList = new ArrayList<>();
-		for (int i = 0; i < 10; i++) {
-			ownersList.add(new Owner());
+	void testProcessFindFormPageSize() throws Exception {
+		List<Owner> ownerList = new ArrayList<>();
+		for (int i = 0; i < 25; i++) {
+			Owner owner = new Owner();
+			owner.setId(i);
+			owner.setFirstName("George");
+			owner.setLastName("Franklin");
+			ownerList.add(owner);
 		}
+		Page<Owner> ownersResults = new PageImpl<>(ownerList, PageRequest.of(0, 10), 25);
+		given(this.owners.findByLastNameStartingWith(eq(""), any())).willReturn(ownersResults);
 
-		given(this.owners.findByLastNameStartingWith(eq(""), any(PageRequest.class)))
-			.willReturn(new PageImpl<>(ownersList, PageRequest.of(0, 10), 25));
-
-		mockMvc.perform(get("/owners").param("page", "1"))
+		mockMvc.perform(get("/owners"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"))
 			.andExpect(model().attribute("totalPages", 3));
+	}
+
+	@Test
+	void testProcessFindFormInvalidPageSizeFallsBackToDefault() throws Exception {
+		List<Owner> ownerList = new ArrayList<>();
+		for (int i = 0; i < 25; i++) {
+			Owner owner = new Owner();
+			owner.setId(i);
+			owner.setFirstName("George");
+			owner.setLastName("Franklin");
+			ownerList.add(owner);
+		}
+		Page<Owner> ownersResults = new PageImpl<>(ownerList, PageRequest.of(0, 5), 25);
+		given(this.owners.findByLastNameStartingWith(eq(""), any())).willReturn(ownersResults);
+
+		mockMvc.perform(get("/owners"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attribute("totalPages", 5));
+	}
+
+	@TestConfiguration
+	static class InvalidPageSizeConfig {
+		@Bean
+		@Primary
+		OwnerController ownerController(OwnerRepository ownerRepository) {
+			return new OwnerController(ownerRepository, 0);
+		}
 	}
 
 }
