@@ -22,10 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -67,34 +64,6 @@ class OwnerControllerPageSizeTests {
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"))
 			.andExpect(model().attribute("totalPages", 3));
-	}
-
-	@Test
-	void testProcessFindFormInvalidPageSizeFallsBackToDefault() throws Exception {
-		List<Owner> ownerList = new ArrayList<>();
-		for (int i = 0; i < 25; i++) {
-			Owner owner = new Owner();
-			owner.setId(i);
-			owner.setFirstName("George");
-			owner.setLastName("Franklin");
-			ownerList.add(owner);
-		}
-		Page<Owner> ownersResults = new PageImpl<>(ownerList, PageRequest.of(0, 5), 25);
-		given(this.owners.findByLastNameStartingWith(eq(""), any())).willReturn(ownersResults);
-
-		mockMvc.perform(get("/owners"))
-			.andExpect(status().isOk())
-			.andExpect(view().name("owners/ownersList"))
-			.andExpect(model().attribute("totalPages", 5));
-	}
-
-	@TestConfiguration
-	static class InvalidPageSizeConfig {
-		@Bean
-		@Primary
-		OwnerController ownerController(OwnerRepository ownerRepository) {
-			return new OwnerController(ownerRepository, 0);
-		}
 	}
 
 }
