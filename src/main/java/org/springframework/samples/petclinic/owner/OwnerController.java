@@ -80,9 +80,9 @@ class OwnerController {
 		}
 
 		String lastName = owner.getLastName().trim();
+		String city = owner.getCity() == null ? "" : owner.getCity().trim();
 
-		// find owners by last name
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
+		Page<Owner> ownersResults = findPaginatedForOwnersLastNameAndCity(page, lastName, city);
 		if (ownersResults.isEmpty()) {
 			// no owners found
 			result.rejectValue("lastName", "notFound", "not found");
@@ -96,12 +96,16 @@ class OwnerController {
 
 		addPaginationModel(page, model, ownersResults);
 		model.addAttribute("searchLastName", lastName);
+		model.addAttribute("searchCity", city);
 		return "owners/ownersList";
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastName) {
+	private Page<Owner> findPaginatedForOwnersLastNameAndCity(int page, String lastName, String city) {
 		Pageable pageable = PageRequest.of(page - 1, ownersPageSize, Sort.by("lastName").ascending());
-		return owners.findByLastNameStartingWith(lastName, pageable);
+		if (city == null || city.isBlank()) {
+			return owners.findByLastNameStartingWith(lastName, pageable);
+		}
+		return owners.findByLastNameStartingWithAndCityIgnoreCase(lastName, city, pageable);
 	}
 
 	private void addPaginationModel(int page, Model model, Page<Owner> paginated) {
