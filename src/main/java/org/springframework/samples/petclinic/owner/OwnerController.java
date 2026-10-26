@@ -20,6 +20,7 @@ import java.util.Collection;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
@@ -41,6 +42,9 @@ class OwnerController {
 	private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
 
 	private final OwnerRepository owners;
+
+	@Value("${petclinic.owners.pageSize:5}")
+	private int ownersPageSize;
 
 	@Autowired
 	public OwnerController(OwnerRepository clinicService) {
@@ -117,7 +121,7 @@ class OwnerController {
 	}
 
 	private Page<Owner> findPaginatedForOwnersFilters(int page, String lastName, String city) {
-		int pageSize = 5;
+		int pageSize = this.ownersPageSize > 0 ? this.ownersPageSize : 5;
 		PageRequest pageRequest = PageRequest.of(page - 1, pageSize);
 
 		boolean hasLastName = !lastName.isBlank();
