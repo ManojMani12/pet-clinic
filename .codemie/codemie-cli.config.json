@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "activeProfile": "SDLC",
+  "profiles": {
+    "SDLC": {
+      "provider": "ai-run-sso",
+      "apiKey": "sso-provided",
+      "baseUrl": "https://codemie.lab.epam.com/code-assistant-api",
+      "model": "claude-sonnet-5-5",
+      "haikuModel": "claude-haiku-5-5",
+      "sonnetModel": "claude-sonnet-5-5",
+      "opusModel": "claude-opus-5-5",
+      "name": "SDLC"
+    }
+  },
+  "workspace": {
+    "codeMieUrl": "https://codemie.lab.epam.com",
+    "codeMieProject": "manoj_m@epam.com"
+  }
+}
