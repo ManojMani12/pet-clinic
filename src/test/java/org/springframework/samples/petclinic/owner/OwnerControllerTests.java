@@ -110,4 +110,24 @@ class OwnerControllerTests {
 		verify(this.owners).findByLastNameStartingWith(eq("Fra"), Mockito.any(Pageable.class));
 	}
 
+	@Test
+	void shouldSearchByCityAndLastNameAndTrimCity() throws Exception {
+		Owner owner1 = new Owner();
+		owner1.setId(1);
+		owner1.setFirstName("Betty");
+		owner1.setLastName("Davis");
+		owner1.setCity("Madison");
+
+		Pageable pageable = PageRequest.of(0, 5);
+		Page<Owner> page = new PageImpl<>(List.of(owner1), pageable, 2);
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Davis"), eq("Madison"),
+				Mockito.any(Pageable.class))).thenReturn(page);
+
+		this.mockMvc.perform(get("/owners").param("lastName", "Davis").param("city", "  Madison  "))
+				.andExpect(status().is3xxRedirection());
+
+		verify(this.owners).findByLastNameStartingWithAndCityIgnoreCase(eq("Davis"), eq("Madison"),
+				Mockito.any(Pageable.class));
+	}
+
 }
