@@ -18,6 +18,7 @@ package org.springframework.samples.petclinic.owner;
 import java.util.Collection;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -45,11 +46,16 @@ class OwnerController {
 
 	private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
 
+	private static final int DEFAULT_OWNERS_PAGE_SIZE = 5;
+
 	private final OwnerRepository owners;
 
+	private final int ownersPageSize;
+
 	@Autowired
-	public OwnerController(OwnerRepository owners) {
+	public OwnerController(OwnerRepository owners, @Value("${petclinic.owners.pageSize:5}") int ownersPageSize) {
 		this.owners = owners;
+		this.ownersPageSize = ownersPageSize;
 	}
 
 	@InitBinder
@@ -132,8 +138,12 @@ class OwnerController {
 		return "owners/ownersList";
 	}
 
+	private int effectiveOwnersPageSize() {
+		return this.ownersPageSize > 0 ? this.ownersPageSize : DEFAULT_OWNERS_PAGE_SIZE;
+	}
+
 	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastName) {
-		int pageSize = 5;
+		int pageSize = effectiveOwnersPageSize();
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
 		return this.owners.findByLastNameStartingWith(lastName, pageable);
 	}
