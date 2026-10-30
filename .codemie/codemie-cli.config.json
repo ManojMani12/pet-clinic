@@ -16,5 +16,43 @@
   "workspace": {
     "codeMieUrl": "https://codemie.lab.epam.com",
     "codeMieProject": "manoj_m@epam.com"
-  }
+  },
+  "codemieAssistants": [
+    {
+      "id": "91d1c560-a835-4558-a8fc-3cf2b00ba877",
+      "name": "Deployment",
+      "slug": "deployment",
+      "description": "Agent to deploy and check health in local",
+      "project": "manoj_m@epam.com",
+      "registeredAt": "2026-10-30T07:12:50.028Z",
+      "registrationMode": "agent",
+      "agentTargets": [
+        "claude"
+      ]
+    },
+    {
+      "id": "ee60a3c1-a004-4776-9d6f-af4314d80163",
+      "name": "Development",
+      "slug": "development",
+      "description": "Agent to develop the enhancements in the code.",
+      "project": "manoj_m@epam.com",
+      "registeredAt": "2026-10-30T07:12:50.030Z",
+      "registrationMode": "agent",
+      "agentTargets": [
+        "claude"
+      ]
+    },
+    {
+      "id": "ec3abb24-80bd-4620-b3e5-28675b8859d7",
+      "name": "Testing",
+      "slug": "testing",
+      "description": "Assistant to create test scripts based on the requirements.",
+      "project": "manoj_m@epam.com",
+      "registeredAt": "2026-10-30T07:12:50.031Z",
+      "registrationMode": "agent",
+      "agentTargets": [
+        "claude"
+      ]
+    }
+  ]
 }
