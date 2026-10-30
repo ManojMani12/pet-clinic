@@ -15,48 +15,70 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.util.Optional;
+import java.util.Collection;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.query.Param;
 
 /**
- * Repository class for <code>Owner</code> domain objects. All method names are compliant
- * with Spring Data naming conventions so this interface can easily be extended for Spring
- * Data. See:
- * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories.query-methods.query-creation
+ * Repository class for <code>Owner</code> domain objects All method names are
+ * compliant with Spring Data naming conventions so this interface can easily be
+ * extended for Spring Data.
  *
  * @author Ken Krebs
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @author Michael Isvy
- * @author Wick Dynex
  */
-public interface OwnerRepository extends JpaRepository<Owner, Integer> {
+public interface OwnerRepository extends Repository<Owner, Integer> {
 
 	/**
-	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
+	 * Retrieve <code>Owner</code>s from the data store by last name, returning all owners
 	 * whose last name <i>starts</i> with the given name.
 	 * @param lastName Value to search for
-	 * @return a Collection of matching {@link Owner}s (or an empty Collection if none
+	 * @return a Collection of matching <code>Owner</code>s (or an empty Collection if none
 	 * found)
+	 */
+	@Query("SELECT DISTINCT owner FROM Owner owner left join fetch owner.pets WHERE owner.lastName LIKE :lastName%")
+	Collection<Owner> findByLastName(@Param("lastName") String lastName) throws DataAccessException;
+
+	/**
+	 * Retrieve <code>Owner</code>s from the data store by last name, returning all owners
+	 * whose last name <i>starts</i> with the given name.
+	 * @param lastName Value to search for
+	 * @param pageable pagination information
+	 * @return a Page of matching <code>Owner</code>s
 	 */
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
 
 	/**
-	 * Retrieve an {@link Owner} from the data store by id.
-	 * <p>
-	 * This method returns an {@link Optional} containing the {@link Owner} if found. If
-	 * no {@link Owner} is found with the provided id, it will return an empty
-	 * {@link Optional}.
-	 * </p>
-	 * @param id the id to search for
-	 * @return an {@link Optional} containing the {@link Owner} if found, or an empty
-	 * {@link Optional} if not found.
-	 * @throws IllegalArgumentException if the id is null (assuming null is not a valid
-	 * input for id)
+	 * Retrieve <code>Owner</code>s from the data store by last name and city.
+	 * @param lastName Value to search for (prefix match)
+	 * @param city Value to search for (case-insensitive exact match)
+	 * @param pageable pagination information
+	 * @return a Page of matching <code>Owner</code>s
 	 */
-	Optional<Owner> findById(Integer id);
+	Page<Owner> findByLastNameStartingWithAndCityIgnoreCase(String lastName, String city, Pageable pageable);
+
+	/**
+	 * Retrieve an <code>Owner</code> from the data store by id.
+	 * @param id the id to search for
+	 * @return the <code>Owner</code> if found
+	 */
+	Owner findById(int id) throws DataAccessException;
+
+	/**
+	 * Save an <code>Owner</code> to the data store, either inserting or updating it.
+	 * @param owner the <code>Owner</code> to save
+	 */
+	void save(Owner owner) throws DataAccessException;
+
+	/**
+	 * Returns all the owners from data store
+	 **/
+	Collection<Owner> findAll() throws DataAccessException;
 
 }
