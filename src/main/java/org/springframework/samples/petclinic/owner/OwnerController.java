@@ -100,8 +100,13 @@ class OwnerController {
 		}
 		owner.setLastName(lastName);
 
-		// find owners by last name
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
+		String city = owner.getCity();
+		if (city != null) {
+			city = city.strip();
+			owner.setCity(city);
+		}
+
+		Page<Owner> ownersResults = findPaginatedForOwnersSearch(page, lastName, city);
 		if (ownersResults.isEmpty()) {
 			// no owners found
 			result.rejectValue("lastName", "notFound", "not found");
@@ -115,19 +120,18 @@ class OwnerController {
 		}
 
 		// multiple owners found
-		return addPaginationModel(page, model, ownersResults, owner.getLastName());
+		return addPaginationModel(page, model, ownersResults, owner.getLastName(), owner.getCity());
 	}
 
 	private String addPaginationModel(int page, Model model, Page<Owner> paginated) {
-		return addPaginationModel(page, model, paginated, null);
+		return addPaginationModel(page, model, paginated, null, null);
 	}
 
-	private String addPaginationModel(int page, Model model, Page<Owner> paginated, String currentLastName) {
+	private String addPaginationModel(int page, Model model, Page<Owner> paginated, String currentLastName,
+			String currentCity) {
 		int totalPages = paginated.getTotalPages();
 		if (totalPages < page || page < 1) {
-			return "redirect:/owners?page=1" + ((currentLastName != null && !currentLastName.isEmpty())
-					? "&lastName=" + currentLastName
-					: "");
+			return "redirect:/owners?page=1" + queryParams(currentLastName, currentCity);
 		}
 		model.addAttribute("listOwners", paginated.getContent());
 		model.addAttribute("totalPages", totalPages);
@@ -135,17 +139,34 @@ class OwnerController {
 		if (currentLastName != null && !currentLastName.isEmpty()) {
 			model.addAttribute("currentLastName", currentLastName);
 		}
+		if (currentCity != null && !currentCity.isEmpty()) {
+			model.addAttribute("currentCity", currentCity);
+		}
 		return "owners/ownersList";
+	}
+
+	private String queryParams(String currentLastName, String currentCity) {
+		StringBuilder params = new StringBuilder();
+		if (currentLastName != null && !currentLastName.isEmpty()) {
+			params.append("&lastName=").append(currentLastName);
+		}
+		if (currentCity != null && !currentCity.isEmpty()) {
+			params.append("&city=").append(currentCity);
+		}
+		return params.toString();
 	}
 
 	private int effectiveOwnersPageSize() {
 		return this.ownersPageSize > 0 ? this.ownersPageSize : DEFAULT_OWNERS_PAGE_SIZE;
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastName) {
+	private Page<Owner> findPaginatedForOwnersSearch(int page, String lastName, String city) {
 		int pageSize = effectiveOwnersPageSize();
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
-		return this.owners.findByLastNameStartingWith(lastName, pageable);
+		if (city == null || city.isEmpty()) {
+			return this.owners.findByLastNameStartingWith(lastName, pageable);
+		}
+		return this.owners.findByLastNameStartingWithAndCityIgnoreCase(lastName, city, pageable);
 	}
 
 	@GetMapping("/{ownerId}")
