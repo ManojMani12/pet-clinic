@@ -27,6 +27,23 @@ Agent to deploy and check health in local
 codemie assistants chat "91d1c560-a835-4558-a8fc-3cf2b00ba877" --conversation-id "<workflow-id>" "message"
 ```
 
+## What the assistant does
+
+The CodeMie Deployment assistant creates `build/build.{sh,bat}` and `build/deploy.{sh,bat}`, builds with `./mvnw clean package`, starts the JAR on port 8080 (logs in `build/run/app.log`), checks `http://localhost:8080/actuator/health`, smoke-tests, and leaves the app running. It expects an upstream HANDOFF block as input and requires the feature PR to be merged into main.
+
+Message to send (fill in the links):
+```
+=== HANDOFF ===
+stage_completed: REVIEW
+epic_link: <Epic URL>
+story_links: <Story URLs>
+artifacts: <feature PR link>
+status: READY_FOR_NEXT
+=== END HANDOFF ===
+```
+
+After it reports, verify yourself: `curl -s http://localhost:8080/actuator/health` must return `{"status":"UP"}`.
+
 ## Examples
 
 **Simple message:**
