@@ -38,23 +38,33 @@
     <span>Pages:</span>
     <span th:each="i : ${#numbers.sequence(1, totalPages)}">
         <a th:if="${currentPage != i}"
-           th:href="@{'/owners?page=' + ${i} + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')}"
+           th:href="@{'/owners?page=' + ${i}
+              + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')
+              + (${currentCity != null} ? '&city=' + ${currentCity} : '')}"
            th:text="${i}">page number</a>
         <span th:unless="${currentPage != i}" th:text="${i}"></span>
     </span>
     <span>
         <a th:if="${currentPage > 1}"
-           th:href="@{'/owners?page=1' + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')}"
+           th:href="@{'/owners?page=1'
+              + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')
+              + (${currentCity != null} ? '&city=' + ${currentCity} : '')}"
            title="First" class="fa fa-fast-backward"></a>
         <a th:if="${currentPage > 1}"
-           th:href="@{'/owners?page=' + ${currentPage - 1} + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')}"
+           th:href="@{'/owners?page=' + ${currentPage - 1}
+              + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')
+              + (${currentCity != null} ? '&city=' + ${currentCity} : '')}"
            title="Previous" class="fa fa-step-backward"></a>
         <span th:text="${currentPage}"></span>
         <a th:if="${currentPage < totalPages}"
-           th:href="@{'/owners?page=' + ${currentPage + 1} + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')}"
+           th:href="@{'/owners?page=' + ${currentPage + 1}
+              + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')
+              + (${currentCity != null} ? '&city=' + ${currentCity} : '')}"
            title="Next" class="fa fa-step-forward"></a>
         <a th:if="${currentPage < totalPages}"
-           th:href="@{'/owners?page=' + ${totalPages} + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')}"
+           th:href="@{'/owners?page=' + ${totalPages}
+              + (${currentLastName != null} ? '&lastName=' + ${currentLastName} : '')
+              + (${currentCity != null} ? '&city=' + ${currentCity} : '')}"
            title="Last" class="fa fa-fast-forward"></a>
     </span>
 </div>
