@@ -15,66 +15,65 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
-
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(OwnerController.class)
 class OwnerControllerPageSizeInvalidConfigTests {
 
 	@Autowired
-	private MockMvc mockMvc;
+	MockMvc mockMvc;
 
-	@MockBean
-	private OwnerRepository owners;
-
-	@Test
-	void testNonPositivePageSizeFallsBackToDefault() throws Exception {
-		List<Owner> ownerList = new ArrayList<>();
-		for (int i = 0; i < 25; i++) {
-			Owner owner = new Owner();
-			owner.setId(i);
-			owner.setFirstName("George");
-			owner.setLastName("Franklin");
-			ownerList.add(owner);
-		}
-
-		Page<Owner> ownersResults = new PageImpl<>(ownerList, PageRequest.of(0, 5), 25);
-		given(this.owners.findByLastNameStartingWith(eq(""), any())).willReturn(ownersResults);
-
-		mockMvc.perform(get("/owners"))
-			.andExpect(status().isOk())
-			.andExpect(view().name("owners/ownersList"))
-			.andExpect(model().attribute("totalPages", 5));
-	}
+	@Autowired
+	OwnerRepository owners;
 
 	@TestConfiguration
-	static class NonPositivePageSizeConfig {
+	static class Config {
+
 		@Bean
-		@Primary
-		OwnerController ownerController(OwnerRepository ownerRepository) {
-			return new OwnerController(ownerRepository, 0);
+		OwnerRepository owners() {
+			return Mockito.mock(OwnerRepository.class);
 		}
+
+		@Bean
+		OwnerController ownerController(OwnerRepository owners) {
+			return new OwnerController(owners, 0);
+		}
+
+	}
+
+	@Test
+	void shouldFallBackToDefaultWhenPageSizeInvalid() throws Exception {
+		Owner owner = new Owner();
+		owner.setId(1);
+		owner.setFirstName("George");
+		owner.setLastName("Franklin");
+
+		Pageable pageable = PageRequest.of(0, 5);
+		Page<Owner> page = new PageImpl<>(List.of(owner), pageable, 2);
+		when(this.owners.findByLastNameStartingWith(eq(""), Mockito.any(Pageable.class))).thenReturn(page);
+
+		this.mockMvc.perform(get("/owners"))
+				.andExpect(status().is3xxRedirection());
+
+		verify(this.owners).findByLastNameStartingWith(eq(""), Mockito.argThat(p -> p.getPageSize() == 5));
 	}
 
 }
