@@ -28,8 +28,7 @@
       </tr>
     </tbody>
   </table>
-  <div th:if="${totalPages > 1}"
-    th:with="qs=${(lastName != null && !lastName.isBlank() ? '&lastName=' + #uris.escapeQueryParam(lastName) : '') + (city != null && !city.isBlank() ? '&city=' + #uris.escapeQueryParam(city) : '')}">
+  <div th:if="${totalPages > 1}" th:with="qs=${filterQuery}">
     <span th:text="#{pages}">Pages:</span>
     <span>[</span>
     <span th:each="i: ${#numbers.sequence(1, totalPages)}">

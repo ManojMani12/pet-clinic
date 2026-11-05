@@ -15,6 +15,8 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -124,7 +126,7 @@ class OwnerController {
 
 		if (ownersResults.isEmpty()) {
 			// no owners found
-			result.rejectValue("lastName", "notFound", "not found");
+			result.rejectValue(lastName.isEmpty() && !city.isEmpty() ? "city" : "lastName", "notFound", "not found");
 			return "owners/findOwners";
 		}
 
@@ -142,11 +144,23 @@ class OwnerController {
 		List<Owner> listOwners = paginated.getContent();
 		model.addAttribute("lastName", lastName);
 		model.addAttribute("city", city);
+		model.addAttribute("filterQuery", filterQuery(lastName, city));
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
 		model.addAttribute("totalItems", paginated.getTotalElements());
 		model.addAttribute("listOwners", listOwners);
 		return "owners/ownersList";
+	}
+
+	private static String filterQuery(String lastName, String city) {
+		StringBuilder query = new StringBuilder();
+		if (!lastName.isEmpty()) {
+			query.append("&lastName=").append(URLEncoder.encode(lastName, StandardCharsets.UTF_8));
+		}
+		if (!city.isEmpty()) {
+			query.append("&city=").append(URLEncoder.encode(city, StandardCharsets.UTF_8));
+		}
+		return query.toString();
 	}
 
 	private Page<Owner> findPaginatedForOwners(int page, String lastname, String city) {

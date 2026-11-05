@@ -29,11 +29,13 @@ import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
@@ -181,16 +183,36 @@ class OwnerControllerTests {
 
 	@Test
 	void processFindFormByLastNameAndCityKeepsFiltersInPaginationLinks() throws Exception {
-		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(0, 2), 4);
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(1, 2), 6);
 		when(this.owners.findByLastNameStartingWithAndCity(eq("Fra"), eq("Madison"), any(Pageable.class)))
 			.thenReturn(tasks);
-		mockMvc.perform(get("/owners").param("lastName", " Fra ").param("city", " Madison "))
+		String content = mockMvc
+			.perform(get("/owners").param("page", "2").param("lastName", " Fra ").param("city", " Madison "))
 			.andExpect(status().isOk())
 			.andExpect(model().attribute("lastName", "Fra"))
 			.andExpect(model().attribute("city", "Madison"))
-			.andExpect(content().string(org.hamcrest.Matchers.containsString("lastName=Fra")))
-			.andExpect(content().string(org.hamcrest.Matchers.containsString("city=Madison")));
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
 		verify(this.owners).findByLastNameStartingWithAndCity(eq("Fra"), eq("Madison"), any(Pageable.class));
+
+		// on page 2 of 3: page number, first and previous link to 1; page number, next
+		// and last link to 3
+		String filters = "&amp;lastName=Fra&amp;city=Madison\"";
+		assertThat(StringUtils.countOccurrencesOf(content, "/owners?page=1" + filters)).isEqualTo(3);
+		assertThat(StringUtils.countOccurrencesOf(content, "/owners?page=3" + filters)).isEqualTo(3);
+		assertThat(StringUtils.countOccurrencesOf(content, "/owners?page=")).isEqualTo(6);
+	}
+
+	@Test
+	void processFindFormByCityOnlyNotFoundRejectsCity() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCity(eq(""), eq("Nowhere"), any(Pageable.class)))
+			.thenReturn(new PageImpl<>(List.of()));
+		mockMvc.perform(get("/owners").param("city", "Nowhere"))
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasFieldErrors("owner", "city"))
+			.andExpect(model().attributeHasFieldErrorCode("owner", "city", "notFound"))
+			.andExpect(view().name("owners/findOwners"));
 	}
 
 	@Test
@@ -199,7 +221,8 @@ class OwnerControllerTests {
 		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
 		mockMvc.perform(get("/owners").param("lastName", "  "))
 			.andExpect(status().isOk())
-			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("lastName"))))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("href=\"/owners?page=2\"")))
+			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("lastName="))))
 			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("city="))));
 	}
 
