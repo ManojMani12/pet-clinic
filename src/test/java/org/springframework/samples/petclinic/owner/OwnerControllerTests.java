@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
@@ -220,6 +221,41 @@ class OwnerControllerTests {
 			.andExpect(view().name("owners/ownersList"));
 
 		verify(this.owners).findByLastNameStartingWith(eq(""), any(Pageable.class));
+	}
+
+	private Page<Owner> multiPage(int page, int total) {
+		return new PageImpl<>(List.of(george(), george()), org.springframework.data.domain.PageRequest.of(page - 1, 2),
+				total);
+	}
+
+	@Test
+	void paginationLinksPreserveTrimmedLastName() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq("Fran klin"), any(Pageable.class))).thenReturn(multiPage(2, 6));
+
+		mockMvc.perform(get("/owners").param("page", "2").param("lastName", "  Fran klin "))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(content().string(containsString("href=\"/owners?page=1&amp;lastName=Fran%20klin\"")))
+			.andExpect(content().string(containsString("href=\"/owners?page=3&amp;lastName=Fran%20klin\"")));
+	}
+
+	@Test
+	void paginationLinksOmitBlankLastName() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(multiPage(2, 6));
+
+		mockMvc.perform(get("/owners").param("page", "2").param("lastName", "   "))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("href=\"/owners?page=3\"")))
+			.andExpect(content().string(not(containsString("lastName="))));
+	}
+
+	@Test
+	void paginationLinksEncodeSpecialCharactersInLastName() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq("O&B=+"), any(Pageable.class))).thenReturn(multiPage(1, 6));
+
+		mockMvc.perform(get("/owners").param("lastName", "O&B=+"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("lastName=O%26B%3D%2B")));
 	}
 
 	@Test

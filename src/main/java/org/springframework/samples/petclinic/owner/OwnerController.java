@@ -15,6 +15,7 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.util.UriUtils;
 
 import jakarta.validation.Valid;
 
@@ -126,16 +128,33 @@ class OwnerController {
 		}
 
 		// multiple owners found
-		return addPaginationModel(page, model, ownersResults);
+		return addPaginationModel(page, model, ownersResults, buildFilterQuery(lastName));
 	}
 
-	private String addPaginationModel(int page, Model model, Page<Owner> paginated) {
+	private String addPaginationModel(int page, Model model, Page<Owner> paginated, String filterQuery) {
 		List<Owner> listOwners = paginated.getContent();
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
 		model.addAttribute("totalItems", paginated.getTotalElements());
 		model.addAttribute("listOwners", listOwners);
+		model.addAttribute("filterQuery", filterQuery);
 		return "owners/ownersList";
+	}
+
+	/**
+	 * Builds the already URL-encoded query string suffix (starting with "&") that carries
+	 * the active search filters across pagination links. Blank filters are omitted.
+	 */
+	private static String buildFilterQuery(String lastName) {
+		StringBuilder query = new StringBuilder();
+		appendParam(query, "lastName", lastName);
+		return query.toString();
+	}
+
+	private static void appendParam(StringBuilder query, String name, String value) {
+		if (value != null && !value.isEmpty()) {
+			query.append('&').append(name).append('=').append(UriUtils.encode(value, StandardCharsets.UTF_8));
+		}
 	}
 
 	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
