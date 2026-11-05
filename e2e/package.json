@@ -1,0 +1,21 @@
+{
+  "name": "petclinic-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright + BDD (Gherkin) UI automation for Spring PetClinic",
+  "scripts": {
+    "bddgen": "bddgen",
+    "test": "bddgen && playwright test",
+    "test:headed": "bddgen && playwright test --headed",
+    "test:smoke": "bddgen && playwright test --grep @smoke",
+    "test:ui": "bddgen && playwright test --ui",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.6",
+    "playwright-bdd": "^9.2.1",
+    "typescript": "^7.0.2"
+  }
+}
