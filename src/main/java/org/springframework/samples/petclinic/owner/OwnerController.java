@@ -15,10 +15,13 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,8 +55,11 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository owners) {
+	private final int pageSize;
+
+	public OwnerController(OwnerRepository owners, @Value("${petclinic.owners.pageSize:5}") int pageSize) {
 		this.owners = owners;
+		this.pageSize = pageSize <= 0 ? 5 : pageSize;
 	}
 
 	@InitBinder
@@ -103,19 +109,24 @@ class OwnerController {
 			lastName = lastName.strip();
 		}
 
-		// find owners by last name
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
+		String city = owner.getCity() == null ? "" : owner.getCity().strip();
+
+		// find owners by last name (and city when provided)
+		Page<Owner> ownersResults = findPaginatedForOwners(page, lastName, city);
 		if (page < 1 || page > Math.max(ownersResults.getTotalPages(), 1)) {
 			redirectAttributes.addAttribute("page", 1);
 			if (!lastName.isEmpty()) {
 				redirectAttributes.addAttribute("lastName", lastName);
+			}
+			if (!city.isEmpty()) {
+				redirectAttributes.addAttribute("city", city);
 			}
 			return "redirect:/owners";
 		}
 
 		if (ownersResults.isEmpty()) {
 			// no owners found
-			result.rejectValue("lastName", "notFound", "not found");
+			result.rejectValue(lastName.isEmpty() && !city.isEmpty() ? "city" : "lastName", "notFound", "not found");
 			return "owners/findOwners";
 		}
 
@@ -126,11 +137,14 @@ class OwnerController {
 		}
 
 		// multiple owners found
-		return addPaginationModel(page, model, ownersResults);
+		return addPaginationModel(page, model, ownersResults, lastName, city);
 	}
 
-	private String addPaginationModel(int page, Model model, Page<Owner> paginated) {
+	private String addPaginationModel(int page, Model model, Page<Owner> paginated, String lastName, String city) {
 		List<Owner> listOwners = paginated.getContent();
+		model.addAttribute("lastName", lastName);
+		model.addAttribute("city", city);
+		model.addAttribute("filterQuery", filterQuery(lastName, city));
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
 		model.addAttribute("totalItems", paginated.getTotalElements());
@@ -138,10 +152,23 @@ class OwnerController {
 		return "owners/ownersList";
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
-		int pageSize = 5;
+	private static String filterQuery(String lastName, String city) {
+		StringBuilder query = new StringBuilder();
+		if (!lastName.isEmpty()) {
+			query.append("&lastName=").append(URLEncoder.encode(lastName, StandardCharsets.UTF_8));
+		}
+		if (!city.isEmpty()) {
+			query.append("&city=").append(URLEncoder.encode(city, StandardCharsets.UTF_8));
+		}
+		return query.toString();
+	}
+
+	private Page<Owner> findPaginatedForOwners(int page, String lastname, String city) {
 		int validatedPage = Math.max(page, 1);
-		Pageable pageable = PageRequest.of(validatedPage - 1, pageSize);
+		Pageable pageable = PageRequest.of(validatedPage - 1, this.pageSize);
+		if (!city.isEmpty()) {
+			return owners.findByLastNameStartingWithAndCity(lastname, city, pageable);
+		}
 		return owners.findByLastNameStartingWith(lastname, pageable);
 	}
 

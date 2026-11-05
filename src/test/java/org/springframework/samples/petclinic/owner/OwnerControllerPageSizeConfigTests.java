@@ -20,7 +20,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Page;
@@ -70,8 +70,7 @@ class OwnerControllerPageSizeConfigTests {
 		Page<Owner> page = new PageImpl<>(List.of(owner), pageable, 2);
 		when(this.owners.findByLastNameStartingWith(eq(""), Mockito.any(Pageable.class))).thenReturn(page);
 
-		this.mockMvc.perform(get("/owners"))
-				.andExpect(status().is3xxRedirection());
+		this.mockMvc.perform(get("/owners")).andExpect(status().is3xxRedirection());
 
 		verify(this.owners).findByLastNameStartingWith(eq(""), Mockito.argThat(p -> p.getPageSize() == 10));
 	}
