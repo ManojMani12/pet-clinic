@@ -43,6 +43,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -333,6 +334,77 @@ class OwnerControllerTests {
 		mockMvc.perform(get("/owners/find"))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("name=\"city\"")));
+	}
+
+	@Test
+	void defaultPageSizeIsFiveAndNotAddedToLinks() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(multiPage(1, 12));
+
+		mockMvc.perform(get("/owners"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(not(containsString("size="))));
+
+		verify(this.owners).findByLastNameStartingWith(eq(""), argThat(p -> p.getPageSize() == 5));
+	}
+
+	@Test
+	void requestedPageSizeIsUsedAndPreservedInPaginationLinks() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fra"), eq("Madison"), any(Pageable.class)))
+			.thenReturn(multiPage(2, 30));
+
+		mockMvc.perform(
+				get("/owners").param("page", "2").param("size", "10").param("lastName", "Fra").param("city", "Madison"))
+			.andExpect(status().isOk())
+			.andExpect(content()
+				.string(containsString("href=\"/owners?page=3&amp;lastName=Fra&amp;city=Madison&amp;size=10\"")));
+
+		verify(this.owners).findByLastNameStartingWithAndCityIgnoreCase(eq("Fra"), eq("Madison"),
+				argThat(p -> p.getPageSize() == 10));
+	}
+
+	@Test
+	void invalidPageSizesFallBackToDefault() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(multiPage(1, 12));
+
+		for (String size : List.of("0", "-3", "abc", "", "2.5", "99999999999")) {
+			mockMvc.perform(get("/owners").param("size", size))
+				.andExpect(status().isOk())
+				.andExpect(content().string(not(containsString("size="))));
+		}
+
+		verify(this.owners, times(6)).findByLastNameStartingWith(eq(""), argThat(p -> p.getPageSize() == 5));
+	}
+
+	@Test
+	void tooLargePageSizeIsClampedToMaximum() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(multiPage(1, 500));
+
+		mockMvc.perform(get("/owners").param("size", "1000"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("page=2&amp;size=100\"")));
+
+		verify(this.owners).findByLastNameStartingWith(eq(""), argThat(p -> p.getPageSize() == 100));
+	}
+
+	@Test
+	void outOfRangeRedirectPreservesFiltersAndPageSize() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fra"), eq("Madison"), any(Pageable.class)))
+			.thenReturn(multiPage(1, 2));
+
+		mockMvc.perform(
+				get("/owners").param("page", "9").param("size", "10").param("lastName", "Fra").param("city", "Madison"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/owners?page=1&lastName=Fra&city=Madison&size=10"));
+	}
+
+	@Test
+	void emptyResultsWithPageSizeShowFindForm() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq("Nobody"), any(Pageable.class)))
+			.thenReturn(new PageImpl<>(List.of()));
+
+		mockMvc.perform(get("/owners").param("lastName", "Nobody").param("size", "10"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/findOwners"));
 	}
 
 	@Test
