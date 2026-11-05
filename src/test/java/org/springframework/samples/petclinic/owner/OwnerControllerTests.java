@@ -45,6 +45,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -256,6 +257,82 @@ class OwnerControllerTests {
 		mockMvc.perform(get("/owners").param("lastName", "O&B=+"))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("lastName=O%26B%3D%2B")));
+	}
+
+	@Test
+	void processFindFormFiltersByCityCombinedWithLastName() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fra"), eq("Madison"), any(Pageable.class)))
+			.thenReturn(multiPage(1, 4));
+
+		mockMvc.perform(get("/owners").param("lastName", "Fra").param("city", "  Madison "))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"));
+
+		verify(this.owners).findByLastNameStartingWithAndCityIgnoreCase(eq("Fra"), eq("Madison"), any(Pageable.class));
+		verify(this.owners, never()).findByLastNameStartingWith(anyString(), any(Pageable.class));
+	}
+
+	@Test
+	void processFindFormWithCityOnlyMatchesAllLastNames() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq(""), eq("Madison"), any(Pageable.class)))
+			.thenReturn(multiPage(1, 4));
+
+		mockMvc.perform(get("/owners").param("city", "Madison"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"));
+	}
+
+	@Test
+	void processFindFormBlankCityKeepsLastNameOnlySearch() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(multiPage(1, 4));
+
+		mockMvc.perform(get("/owners").param("lastName", "Franklin").param("city", "   "))
+			.andExpect(status().isOk())
+			.andExpect(content().string(not(containsString("city="))));
+
+		verify(this.owners, never()).findByLastNameStartingWithAndCityIgnoreCase(anyString(), anyString(),
+				any(Pageable.class));
+	}
+
+	@Test
+	void paginationLinksPreserveLastNameAndCity() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fra"), eq("New York"), any(Pageable.class)))
+			.thenReturn(multiPage(2, 6));
+
+		mockMvc.perform(get("/owners").param("page", "2").param("lastName", "Fra").param("city", " New York "))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("href=\"/owners?page=1&amp;lastName=Fra&amp;city=New%20York\"")))
+			.andExpect(
+					content().string(containsString("href=\"/owners?page=3&amp;lastName=Fra&amp;city=New%20York\"")));
+	}
+
+	@Test
+	void processFindFormRedirectPreservesCity() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fra"), eq("Madison"), any(Pageable.class)))
+			.thenReturn(multiPage(1, 2));
+
+		mockMvc.perform(get("/owners").param("page", "5").param("lastName", "Fra").param("city", "Madison"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/owners?page=1&lastName=Fra&city=Madison"));
+	}
+
+	@Test
+	void processFindFormByCityNoOwnersFound() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq(""), eq("Atlantis"), any(Pageable.class)))
+			.thenReturn(new PageImpl<>(List.of()));
+
+		mockMvc.perform(get("/owners").param("city", "Atlantis"))
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasFieldErrorCode("owner", "lastName", "notFound"))
+			.andExpect(view().name("owners/findOwners"))
+			.andExpect(content().string(containsString("value=\"Atlantis\"")));
+	}
+
+	@Test
+	void initFindFormShowsCityInput() throws Exception {
+		mockMvc.perform(get("/owners/find"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("name=\"city\"")));
 	}
 
 	@Test

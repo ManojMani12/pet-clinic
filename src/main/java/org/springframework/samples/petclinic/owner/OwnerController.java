@@ -105,12 +105,18 @@ class OwnerController {
 			lastName = lastName.strip();
 		}
 
-		// find owners by last name
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
+		String city = owner.getCity() == null ? "" : owner.getCity().strip();
+
+		// find owners by last name (prefix) and, when given, city (exact,
+		// case-insensitive)
+		Page<Owner> ownersResults = findPaginatedForOwners(page, lastName, city);
 		if (page < 1 || page > Math.max(ownersResults.getTotalPages(), 1)) {
 			redirectAttributes.addAttribute("page", 1);
 			if (!lastName.isEmpty()) {
 				redirectAttributes.addAttribute("lastName", lastName);
+			}
+			if (!city.isEmpty()) {
+				redirectAttributes.addAttribute("city", city);
 			}
 			return "redirect:/owners";
 		}
@@ -128,7 +134,7 @@ class OwnerController {
 		}
 
 		// multiple owners found
-		return addPaginationModel(page, model, ownersResults, buildFilterQuery(lastName));
+		return addPaginationModel(page, model, ownersResults, buildFilterQuery(lastName, city));
 	}
 
 	private String addPaginationModel(int page, Model model, Page<Owner> paginated, String filterQuery) {
@@ -145,9 +151,10 @@ class OwnerController {
 	 * Builds the already URL-encoded query string suffix (starting with "&") that carries
 	 * the active search filters across pagination links. Blank filters are omitted.
 	 */
-	private static String buildFilterQuery(String lastName) {
+	private static String buildFilterQuery(String lastName, String city) {
 		StringBuilder query = new StringBuilder();
 		appendParam(query, "lastName", lastName);
+		appendParam(query, "city", city);
 		return query.toString();
 	}
 
@@ -157,11 +164,14 @@ class OwnerController {
 		}
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
+	private Page<Owner> findPaginatedForOwners(int page, String lastName, String city) {
 		int pageSize = 5;
 		int validatedPage = Math.max(page, 1);
 		Pageable pageable = PageRequest.of(validatedPage - 1, pageSize);
-		return owners.findByLastNameStartingWith(lastname, pageable);
+		if (city.isEmpty()) {
+			return owners.findByLastNameStartingWith(lastName, pageable);
+		}
+		return owners.findByLastNameStartingWithAndCityIgnoreCase(lastName, city, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
