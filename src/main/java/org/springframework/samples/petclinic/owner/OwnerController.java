@@ -15,11 +15,14 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,7 +38,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.util.UriUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.validation.Valid;
 
@@ -61,6 +64,11 @@ class OwnerController {
 
 	private final int defaultPageSize;
 
+	public OwnerController(OwnerRepository owners) {
+		this(owners, DEFAULT_PAGE_SIZE);
+	}
+
+	@Autowired
 	public OwnerController(OwnerRepository owners,
 			@Value("${owners.page-size:" + DEFAULT_PAGE_SIZE + "}") int configuredPageSize) {
 		this.owners = owners;
@@ -172,35 +180,47 @@ class OwnerController {
 		}
 
 		// multiple owners found
-		return addPaginationModel(page, model, ownersResults, buildFilterQuery(lastName, city, sizeParam));
+		model.addAttribute("pageLinks", buildPageLinks(ownersResults.getTotalPages(), lastName, city, sizeParam));
+		return addPaginationModel(page, model, ownersResults);
 	}
 
-	private String addPaginationModel(int page, Model model, Page<Owner> paginated, String filterQuery) {
+	private String addPaginationModel(int page, Model model, Page<Owner> paginated) {
 		List<Owner> listOwners = paginated.getContent();
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
 		model.addAttribute("totalItems", paginated.getTotalElements());
 		model.addAttribute("listOwners", listOwners);
-		model.addAttribute("filterQuery", filterQuery);
 		return "owners/ownersList";
 	}
 
 	/**
-	 * Builds the already URL-encoded query string suffix (starting with "&") that carries
-	 * the active search filters across pagination links. Blank filters are omitted.
+	 * Builds one fully-formed, URL-encoded link per page number (1..totalPages). The
+	 * filter values are passed as URI variables so they are encoded exactly once (strict
+	 * encoding, so {@code &}, {@code %}, {@code +} and non-ASCII characters are escaped).
+	 * Blank filters and a default page size are omitted.
 	 */
-	private static String buildFilterQuery(String lastName, String city, Integer size) {
-		StringBuilder query = new StringBuilder();
-		appendParam(query, "lastName", lastName);
-		appendParam(query, "city", city);
-		appendParam(query, "size", size == null ? null : size.toString());
-		return query.toString();
-	}
-
-	private static void appendParam(StringBuilder query, String name, String value) {
-		if (value != null && !value.isEmpty()) {
-			query.append('&').append(name).append('=').append(UriUtils.encode(value, StandardCharsets.UTF_8));
+	private static Map<Integer, String> buildPageLinks(int totalPages, String lastName, String city, Integer size) {
+		UriComponentsBuilder base = UriComponentsBuilder.fromPath("/owners").queryParam("page", "{page}");
+		Map<String, Object> vars = new HashMap<>();
+		if (!lastName.isEmpty()) {
+			base.queryParam("lastName", "{lastName}");
+			vars.put("lastName", lastName);
 		}
+		if (!city.isEmpty()) {
+			base.queryParam("city", "{city}");
+			vars.put("city", city);
+		}
+		if (size != null) {
+			base.queryParam("size", "{size}");
+			vars.put("size", size);
+		}
+		UriComponentsBuilder template = base.encode();
+		Map<Integer, String> links = new LinkedHashMap<>();
+		for (int i = 1; i <= totalPages; i++) {
+			vars.put("page", i);
+			links.put(i, template.buildAndExpand(vars).toUriString());
+		}
+		return links;
 	}
 
 	private Page<Owner> findPaginatedForOwners(int page, int pageSize, String lastName, String city) {

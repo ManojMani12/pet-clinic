@@ -261,6 +261,47 @@ class OwnerControllerTests {
 	}
 
 	@Test
+	void paginationLinksEncodeSpecialCharactersOnceInLastNameAndCity() throws Exception {
+		String lastName = "O'Neil & 100% Ångström";
+		String city = "São Paulo & Co";
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq(lastName), eq(city), any(Pageable.class)))
+			.thenReturn(multiPage(2, 6));
+
+		String encoded = "lastName=O%27Neil%20%26%20100%25%20%C3%85ngstr%C3%B6m&amp;city=S%C3%A3o%20Paulo%20%26%20Co";
+		mockMvc.perform(get("/owners").param("page", "2").param("lastName", lastName).param("city", city))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("href=\"/owners?page=1&amp;" + encoded + "\"")))
+			.andExpect(content().string(containsString("href=\"/owners?page=3&amp;" + encoded + "\"")))
+			.andExpect(content().string(not(containsString("%25252"))))
+			.andExpect(content().string(not(containsString("%2520"))))
+			.andExpect(content().string(not(containsString("%2526"))));
+	}
+
+	@Test
+	void paginationLinksOmitBlankCityAndDefaultSize() throws Exception {
+		when(this.owners.findByLastNameStartingWith(eq("Fra"), any(Pageable.class))).thenReturn(multiPage(2, 6));
+
+		mockMvc
+			.perform(get("/owners").param("page", "2").param("lastName", "Fra").param("city", "  ").param("size", "5"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("href=\"/owners?page=3&amp;lastName=Fra\"")))
+			.andExpect(content().string(not(containsString("city="))))
+			.andExpect(content().string(not(containsString("size="))));
+	}
+
+	@Test
+	void processFindFormRedirectEncodesSpecialCharactersOnce() throws Exception {
+		String lastName = "O'Neil & 100% Å";
+		String city = "São Paulo";
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq(lastName), eq(city), any(Pageable.class)))
+			.thenReturn(multiPage(1, 2));
+
+		mockMvc.perform(get("/owners").param("page", "5").param("lastName", lastName).param("city", city))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/owners?page=1&lastName=O%27Neil+%26+100%25+%C3%85&city=S%C3%A3o+Paulo"));
+	}
+
+	@Test
 	void processFindFormFiltersByCityCombinedWithLastName() throws Exception {
 		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fra"), eq("Madison"), any(Pageable.class)))
 			.thenReturn(multiPage(1, 4));
