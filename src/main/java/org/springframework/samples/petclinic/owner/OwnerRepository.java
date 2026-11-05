@@ -45,15 +45,6 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
 
 	/**
-	 * Retrieve {@link Owner}s whose last name <i>starts</i> with the given name and whose
-	 * city equals the given city, ignoring case.
-	 * @param lastName Value to search for
-	 * @param city exact city name (case-insensitive)
-	 * @return a page of matching {@link Owner}s (empty if none found)
-	 */
-	Page<Owner> findByLastNameStartingWithAndCityIgnoreCase(String lastName, String city, Pageable pageable);
-
-	/**
 	 * Retrieve an {@link Owner} from the data store by id.
 	 * <p>
 	 * This method returns an {@link Optional} containing the {@link Owner} if found. If

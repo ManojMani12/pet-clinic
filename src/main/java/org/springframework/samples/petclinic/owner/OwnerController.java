@@ -15,15 +15,10 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,7 +33,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.validation.Valid;
 
@@ -56,46 +50,10 @@ class OwnerController {
 
 	private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
 
-	static final int DEFAULT_PAGE_SIZE = 5;
-
-	static final int MAX_PAGE_SIZE = 100;
-
 	private final OwnerRepository owners;
 
-	private final int defaultPageSize;
-
 	public OwnerController(OwnerRepository owners) {
-		this(owners, DEFAULT_PAGE_SIZE);
-	}
-
-	@Autowired
-	public OwnerController(OwnerRepository owners,
-			@Value("${owners.page-size:" + DEFAULT_PAGE_SIZE + "}") int configuredPageSize) {
 		this.owners = owners;
-		this.defaultPageSize = clampPageSize(configuredPageSize, DEFAULT_PAGE_SIZE);
-	}
-
-	/**
-	 * Returns {@code requested} bounded to [1, MAX_PAGE_SIZE]: non-positive values fall
-	 * back to {@code fallback}, values above the maximum are clamped to it.
-	 */
-	private static int clampPageSize(int requested, int fallback) {
-		if (requested < 1) {
-			return fallback;
-		}
-		return Math.min(requested, MAX_PAGE_SIZE);
-	}
-
-	private int resolvePageSize(String requestedSize) {
-		if (requestedSize == null) {
-			return this.defaultPageSize;
-		}
-		try {
-			return clampPageSize(Integer.parseInt(requestedSize.strip()), this.defaultPageSize);
-		}
-		catch (NumberFormatException ex) {
-			return this.defaultPageSize;
-		}
 	}
 
 	@InitBinder
@@ -134,8 +92,7 @@ class OwnerController {
 	}
 
 	@GetMapping("/owners")
-	public String processFindForm(@RequestParam(defaultValue = "1") int page,
-			@RequestParam(name = "size", required = false) String requestedSize, Owner owner, BindingResult result,
+	public String processFindForm(@RequestParam(defaultValue = "1") int page, Owner owner, BindingResult result,
 			Model model, RedirectAttributes redirectAttributes) {
 		// allow parameterless GET request for /owners to return all records
 		String lastName = owner.getLastName();
@@ -146,23 +103,12 @@ class OwnerController {
 			lastName = lastName.strip();
 		}
 
-		String city = owner.getCity() == null ? "" : owner.getCity().strip();
-		int pageSize = resolvePageSize(requestedSize);
-		Integer sizeParam = pageSize == this.defaultPageSize ? null : pageSize;
-
-		// find owners by last name (prefix) and, when given, city (exact,
-		// case-insensitive)
-		Page<Owner> ownersResults = findPaginatedForOwners(page, pageSize, lastName, city);
+		// find owners by last name
+		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
 		if (page < 1 || page > Math.max(ownersResults.getTotalPages(), 1)) {
 			redirectAttributes.addAttribute("page", 1);
 			if (!lastName.isEmpty()) {
 				redirectAttributes.addAttribute("lastName", lastName);
-			}
-			if (!city.isEmpty()) {
-				redirectAttributes.addAttribute("city", city);
-			}
-			if (sizeParam != null) {
-				redirectAttributes.addAttribute("size", sizeParam);
 			}
 			return "redirect:/owners";
 		}
@@ -180,7 +126,6 @@ class OwnerController {
 		}
 
 		// multiple owners found
-		model.addAttribute("pageLinks", buildPageLinks(ownersResults.getTotalPages(), lastName, city, sizeParam));
 		return addPaginationModel(page, model, ownersResults);
 	}
 
@@ -193,43 +138,11 @@ class OwnerController {
 		return "owners/ownersList";
 	}
 
-	/**
-	 * Builds one fully-formed, URL-encoded link per page number (1..totalPages). The
-	 * filter values are passed as URI variables so they are encoded exactly once (strict
-	 * encoding, so {@code &}, {@code %}, {@code +} and non-ASCII characters are escaped).
-	 * Blank filters and a default page size are omitted.
-	 */
-	private static Map<Integer, String> buildPageLinks(int totalPages, String lastName, String city, Integer size) {
-		UriComponentsBuilder base = UriComponentsBuilder.fromPath("/owners").queryParam("page", "{page}");
-		Map<String, Object> vars = new HashMap<>();
-		if (!lastName.isEmpty()) {
-			base.queryParam("lastName", "{lastName}");
-			vars.put("lastName", lastName);
-		}
-		if (!city.isEmpty()) {
-			base.queryParam("city", "{city}");
-			vars.put("city", city);
-		}
-		if (size != null) {
-			base.queryParam("size", "{size}");
-			vars.put("size", size);
-		}
-		UriComponentsBuilder template = base.encode();
-		Map<Integer, String> links = new LinkedHashMap<>();
-		for (int i = 1; i <= totalPages; i++) {
-			vars.put("page", i);
-			links.put(i, template.buildAndExpand(vars).toUriString());
-		}
-		return links;
-	}
-
-	private Page<Owner> findPaginatedForOwners(int page, int pageSize, String lastName, String city) {
+	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
+		int pageSize = 5;
 		int validatedPage = Math.max(page, 1);
 		Pageable pageable = PageRequest.of(validatedPage - 1, pageSize);
-		if (city.isEmpty()) {
-			return owners.findByLastNameStartingWith(lastName, pageable);
-		}
-		return owners.findByLastNameStartingWithAndCityIgnoreCase(lastName, city, pageable);
+		return owners.findByLastNameStartingWith(lastname, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
