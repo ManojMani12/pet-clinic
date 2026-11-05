@@ -1,0 +1,7 @@
+{
+    "name": "PetClinic SDLC Workflow",
+    "project": "manoj_m@epam.com",
+    "mode": "Sequential",
+    "shared": false,
+    "description": "Sequential SDLC workflow for the Pet Clinic repository using registered CodeMie assistants."
+}

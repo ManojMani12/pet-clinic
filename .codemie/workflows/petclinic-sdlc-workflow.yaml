@@ -1,0 +1,225 @@
+assistants:
+  - id: gap_analysis_assistant
+    assistant_id: fbe9ced2-70f2-4194-8e9c-95d8dde308d3
+  - id: requirements_assistant
+    assistant_id: 64fa0686-594c-4986-a1c3-994d51094446
+  - id: planning_assistant
+    assistant_id: 88671277-372c-41f6-bd74-7d37a258ca7e
+  - id: design_assistant
+    assistant_id: 33f1d9f6-9c48-4126-a80a-d494a68f5e13
+  - id: development_assistant
+    assistant_id: ee60a3c1-a004-4776-9d6f-af4314d80163
+  - id: code_review_assistant
+    assistant_id: 28192007-000d-4bcf-a13f-4e33c070c0ef
+  - id: testing_assistant
+    assistant_id: ec3abb24-80bd-4620-b3e5-28675b8859d7
+  - id: deployment_assistant
+    assistant_id: 91d1c560-a835-4558-a8fc-3cf2b00ba877
+  - id: documentation_assistant
+    assistant_id: ebf25954-6111-4ec7-a2e7-9c9a93b79603
+
+states:
+  - id: gap_analysis
+    assistant_id: gap_analysis_assistant
+    next:
+      state_id: requirements
+    task: Analyze the Pet Clinic repository or requested change context from {{user_input}}. Identify gaps, enhancement opportunities, affected modules, and implementation risks.
+    output_schema: "{enhancements}"
+    interrupt_before: false
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+  - id: requirements
+    assistant_id: requirements_assistant
+    next:
+      state_id: planning
+    task: Convert {{enhancements}} into clear requirements and acceptance criteria. Pause for human review before downstream implementation work proceeds.
+    output_schema: "{requirements}"
+    interrupt_before: true
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+  - id: planning
+    assistant_id: planning_assistant
+    next:
+      state_id: design
+    task: Prepare an implementation plan for {{requirements}}, including affected files, sequencing, validation strategy, and risks.
+    output_schema: "{plan}"
+    interrupt_before: false
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+  - id: design
+    assistant_id: design_assistant
+    next:
+      state_id: development
+    task: Create the technical design for {{plan}}, covering backend, UI, data, integration, and test considerations for Spring PetClinic.
+    output_schema: "{design}"
+    interrupt_before: true
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+  - id: development
+    assistant_id: development_assistant
+    next:
+      state_id: code_review
+    task: Implement the approved {{design}} in the repository. Keep changes focused and include relevant validation steps.
+    output_schema: "{development}"
+    interrupt_before: true
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+  - id: code_review
+    assistant_id: code_review_assistant
+    next:
+      state_id: testing
+    task: Review {{development}} against {{requirements}} and {{design}}. Report defects, risks, and required fixes before testing.
+    output_schema: "{code_review}"
+    interrupt_before: true
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+  - id: testing
+    assistant_id: testing_assistant
+    next:
+      state_id: deployment
+    task: Prepare and execute tests for {{requirements}} using {{development}} and {{code_review}} as context. Include test results and unresolved gaps.
+    output_schema: "{test_results}"
+    interrupt_before: true
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+  - id: deployment
+    assistant_id: deployment_assistant
+    next:
+      state_id: documentation
+    task: Deploy or run the Pet Clinic application locally using {{development}} and {{test_results}}. Check application health and report the run status.
+    output_schema: "{deployment}"
+    interrupt_before: true
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+  - id: documentation
+    assistant_id: documentation_assistant
+    next:
+      state_id: end
+    task: Update or propose documentation based on {{requirements}}, {{plan}}, {{design}}, {{development}}, {{test_results}}, and {{deployment}}.
+    output_schema: "{documentation}"
+    interrupt_before: true
+    finish_iteration: false
+    resolve_dynamic_values_in_prompt: true
+    result_as_human_message: false
+
+meta_states:
+  - id: start
+    type: start
+    is_connected: false
+    position:
+      x: 0
+      y: 20
+    measured:
+      width: 256
+      height: 66
+    data: {}
+    selected: false
+  - type: assistant
+    position:
+      x: 356
+      y: 20
+    is_connected: true
+    selected: false
+    id: gap_analysis
+    measured:
+      width: 256
+      height: 66
+  - type: assistant
+    position:
+      x: 712
+      y: 20
+    is_connected: true
+    selected: false
+    id: requirements
+    measured:
+      width: 256
+      height: 66
+  - type: assistant
+    position:
+      x: 1068
+      y: 20
+    is_connected: true
+    selected: false
+    id: planning
+    measured:
+      width: 256
+      height: 66
+  - type: assistant
+    position:
+      x: 1424
+      y: 20
+    is_connected: true
+    selected: false
+    id: design
+    measured:
+      width: 256
+      height: 66
+  - type: assistant
+    position:
+      x: 1780
+      y: 20
+    is_connected: true
+    selected: false
+    id: development
+    measured:
+      width: 256
+      height: 66
+  - type: assistant
+    position:
+      x: 2136
+      y: 20
+    is_connected: true
+    selected: false
+    id: code_review
+    measured:
+      width: 256
+      height: 66
+  - type: assistant
+    position:
+      x: 2492
+      y: 20
+    is_connected: true
+    selected: false
+    id: testing
+    measured:
+      width: 256
+      height: 66
+  - type: assistant
+    position:
+      x: 2848
+      y: 20
+    is_connected: true
+    selected: false
+    id: deployment
+    measured:
+      width: 256
+      height: 66
+  - type: assistant
+    position:
+      x: 3204
+      y: 20
+    is_connected: true
+    selected: false
+    id: documentation
+    measured:
+      width: 256
+      height: 66
+  - id: end
+    type: end
+    is_connected: true
+    position:
+      x: 3560
+      y: 20
+    measured:
+      width: 256
+      height: 66
+    data: {}
+    selected: false
