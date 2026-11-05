@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -176,6 +177,30 @@ class OwnerControllerTests {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
 		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk()).andExpect(view().name("owners/ownersList"));
+	}
+
+	@Test
+	void processFindFormByLastNameAndCityKeepsFiltersInPaginationLinks() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(0, 2), 4);
+		when(this.owners.findByLastNameStartingWithAndCity(eq("Fra"), eq("Madison"), any(Pageable.class)))
+			.thenReturn(tasks);
+		mockMvc.perform(get("/owners").param("lastName", " Fra ").param("city", " Madison "))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("lastName", "Fra"))
+			.andExpect(model().attribute("city", "Madison"))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("lastName=Fra")))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("city=Madison")));
+		verify(this.owners).findByLastNameStartingWithAndCity(eq("Fra"), eq("Madison"), any(Pageable.class));
+	}
+
+	@Test
+	void paginationLinksOmitBlankFilters() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(0, 2), 4);
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners").param("lastName", "  "))
+			.andExpect(status().isOk())
+			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("lastName"))))
+			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("city="))));
 	}
 
 	@Test
