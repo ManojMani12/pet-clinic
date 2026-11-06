@@ -96,6 +96,27 @@ class ClinicServiceTests {
 	}
 
 	@Test
+	void shouldFindOwnersByCityIgnoringCase() {
+		assertThat(this.owners.findByCityIgnoreCase("madison", pageable)).hasSize(4);
+		assertThat(this.owners.findByCityIgnoreCase("MADISON", pageable)).hasSize(4);
+		// exact match only, not "contains"
+		assertThat(this.owners.findByCityIgnoreCase("Madis", pageable)).isEmpty();
+		assertThat(this.owners.findByCityIgnoreCase("Unknown", pageable)).isEmpty();
+	}
+
+	@Test
+	void shouldFindOwnersByLastNameAndCityIgnoringCase() {
+		Page<Owner> result = this.owners.findByLastNameStartingWithAndCityIgnoreCase("Fr", "mAdIsOn", pageable);
+		assertThat(result).hasSize(1);
+		assertThat(result.getContent().get(0).getLastName()).isEqualTo("Franklin");
+
+		// last name matches but city does not
+		assertThat(this.owners.findByLastNameStartingWithAndCityIgnoreCase("Franklin", "Monona", pageable)).isEmpty();
+		assertThat(this.owners.findByLastNameStartingWithAndCityIgnoreCase("Davis", "Sun Prairie", pageable))
+			.hasSize(1);
+	}
+
+	@Test
 	void shouldFindSingleOwnerWithPet() {
 		Optional<Owner> optionalOwner = this.owners.findById(1);
 		assertThat(optionalOwner).isPresent();

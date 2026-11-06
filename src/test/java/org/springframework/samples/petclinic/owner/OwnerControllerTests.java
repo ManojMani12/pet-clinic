@@ -46,6 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -197,8 +198,57 @@ class OwnerControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"))
 			.andExpect(model().attribute("lastName", "Fr"))
-			.andExpect(content().string(containsString("href=\"/owners?page=1&amp;lastName=Fr\"")))
-			.andExpect(content().string(containsString("href=\"/owners?page=3&amp;lastName=Fr\"")));
+			.andExpect(content().string(containsString("href=\"/owners?page=1&amp;lastName=Fr&amp;city=\"")))
+			.andExpect(content().string(containsString("href=\"/owners?page=3&amp;lastName=Fr&amp;city=\"")));
+	}
+
+	@Test
+	void processFindFormPaginationLinksCarryCity() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(1, 2), 6);
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fr"), eq("Madison"), any(Pageable.class)))
+			.thenReturn(tasks);
+		mockMvc.perform(get("/owners").param("page", "2").param("lastName", "Fr").param("city", "Madison"))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("city", "Madison"))
+			.andExpect(content().string(containsString("href=\"/owners?page=1&amp;lastName=Fr&amp;city=Madison\"")))
+			.andExpect(content().string(containsString("href=\"/owners?page=3&amp;lastName=Fr&amp;city=Madison\"")));
+	}
+
+	@Test
+	void processFindFormByCityOnlyWhenLastNameBlank() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
+		when(this.owners.findByCityIgnoreCase(eq("Madison"), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1").param("city", "Madison"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"));
+		verify(this.owners).findByCityIgnoreCase(eq("Madison"), any(Pageable.class));
+	}
+
+	@Test
+	void processFindFormTrimsCity() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Fr"), eq("Madison"), any(Pageable.class)))
+			.thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1").param("lastName", "Fr").param("city", "  Madison  "))
+			.andExpect(status().isOk());
+		verify(this.owners).findByLastNameStartingWithAndCityIgnoreCase(eq("Fr"), eq("Madison"),
+				any(Pageable.class));
+	}
+
+	@Test
+	void processFindFormBlankCityUsesLastNameOnlyQuery() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george()));
+		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin").param("city", "   "))
+			.andExpect(status().is3xxRedirection());
+		verify(this.owners, never()).findByCityIgnoreCase(anyString(), any(Pageable.class));
+	}
+
+	@Test
+	void processFindFormRedirectKeepsCity() throws Exception {
+		mockMvc.perform(get("/owners").param("page", "2").param("lastName", "Franklin").param("city", "Madison"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/owners?page=1&lastName=Franklin&city=Madison"));
 	}
 
 	@Test
