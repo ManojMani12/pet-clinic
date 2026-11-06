@@ -6,6 +6,12 @@
 
   <h2 th:text="#{owners}">Owners</h2>
 
+  <div id="search-context" th:if="${lastName != null and !lastName.isEmpty()}">
+    <span><span th:text="#{filteredBy}">Last name filter</span>: <strong th:text="${lastName}"></strong></span>
+    <a class="btn btn-default" th:href="@{/owners/find(lastName=${lastName})}" th:text="#{backToSearch}">Back to Search</a>
+    <a class="btn btn-default" th:href="@{/owners(page=1)}" th:text="#{clearFilter}">Clear Filter</a>
+  </div>
+
   <table id="owners" class="table table-striped">
     <thead>
       <tr>

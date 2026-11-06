@@ -192,6 +192,27 @@ class OwnerControllerTests {
 	}
 
 	@Test
+	void initFindFormPrefillsLastNameFromQueryString() throws Exception {
+		mockMvc.perform(get("/owners/find").param("lastName", "Fr"))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("owner", hasProperty("lastName", is("Fr"))))
+			.andExpect(content().string(containsString("value=\"Fr\"")));
+	}
+
+	@Test
+	void processFindFormShowsSearchContextOnlyWhenFiltered() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(0, 2), 6);
+		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
+
+		mockMvc.perform(get("/owners?page=1").param("lastName", "Fr"))
+			.andExpect(content().string(containsString("search-context")))
+			.andExpect(content().string(containsString("/owners/find?lastName=Fr")))
+			.andExpect(content().string(containsString("href=\"/owners?page=1\"")));
+
+		mockMvc.perform(get("/owners?page=1")).andExpect(content().string(not(containsString("search-context"))));
+	}
+
+	@Test
 	void processFindFormRedirectsOutOfBoundsPageToFirstPage() throws Exception {
 		for (int page : List.of(0, 2)) {
 			mockMvc.perform(get("/owners").param("page", Integer.toString(page)).param("lastName", "Franklin"))

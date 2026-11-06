@@ -87,7 +87,7 @@ class OwnerController {
 	}
 
 	@GetMapping("/owners/find")
-	public String initFindForm() {
+	public String initFindForm(Owner owner) {
 		return "owners/findOwners";
 	}
 
