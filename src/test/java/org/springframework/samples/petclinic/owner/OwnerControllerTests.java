@@ -95,7 +95,7 @@ class OwnerControllerTests {
 	void setup() {
 
 		Owner george = george();
-		given(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
+		given(this.owners.findByLastNameStartingWithAndCity(eq("Franklin"), any(), any(Pageable.class)))
 			.willReturn(new PageImpl<>(List.of(george)));
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
@@ -176,14 +176,14 @@ class OwnerControllerTests {
 	@Test
 	void processFindFormSuccess() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
-		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameStartingWithAndCity(anyString(), any(), any(Pageable.class))).thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk()).andExpect(view().name("owners/ownersList"));
 	}
 
 	@Test
 	void processFindFormPreservesLastNameInPaginationLinks() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(0, 2), 6);
-		when(this.owners.findByLastNameStartingWith(eq("Fr"), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameStartingWithAndCity(eq("Fr"), any(), any(Pageable.class))).thenReturn(tasks);
 
 		mockMvc.perform(get("/owners?page=1").param("lastName", " Fr "))
 			.andExpect(status().isOk())
@@ -202,7 +202,7 @@ class OwnerControllerTests {
 	@Test
 	void processFindFormShowsSearchContextOnlyWhenFiltered() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(0, 2), 6);
-		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameStartingWithAndCity(anyString(), any(), any(Pageable.class))).thenReturn(tasks);
 
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Fr"))
 			.andExpect(content().string(containsString("search-context")))
@@ -210,6 +210,27 @@ class OwnerControllerTests {
 			.andExpect(content().string(containsString("href=\"/owners?page=1\"")));
 
 		mockMvc.perform(get("/owners?page=1")).andExpect(content().string(not(containsString("search-context"))));
+	}
+
+	@Test
+	void processFindFormPassesCityAndPreservesItInLinks() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(0, 2), 6);
+		when(this.owners.findByLastNameStartingWithAndCity(eq("Fr"), eq("Madison"), any(Pageable.class)))
+			.thenReturn(tasks);
+
+		mockMvc.perform(get("/owners?page=1").param("lastName", "Fr").param("city", " Madison "))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("city", "Madison"))
+			.andExpect(content().string(containsString("/owners?page=2&amp;lastName=Fr&amp;city=Madison")))
+			.andExpect(content().string(containsString("/owners/find?lastName=Fr&amp;city=Madison")));
+	}
+
+	@Test
+	void processFindFormTreatsBlankCityAsNoFilter() throws Exception {
+		mockMvc.perform(get("/owners").param("lastName", "Franklin").param("city", "  "))
+			.andExpect(status().is3xxRedirection());
+
+		verify(this.owners).findByLastNameStartingWithAndCity(eq("Franklin"), eq(null), any(Pageable.class));
 	}
 
 	@Test
@@ -224,7 +245,8 @@ class OwnerControllerTests {
 	@Test
 	void processFindFormByLastName() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
-		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameStartingWithAndCity(eq("Franklin"), any(), any(Pageable.class)))
+			.thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
@@ -233,7 +255,8 @@ class OwnerControllerTests {
 	@Test
 	void processFindFormIgnoresSurroundingWhitespace() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
-		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameStartingWithAndCity(eq("Franklin"), any(), any(Pageable.class)))
+			.thenReturn(tasks);
 
 		for (String lastName : List.of(" Franklin", "Franklin ", " Franklin ")) {
 			mockMvc.perform(get("/owners?page=1").param("lastName", lastName))
@@ -241,25 +264,26 @@ class OwnerControllerTests {
 				.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
 		}
 
-		verify(this.owners, times(3)).findByLastNameStartingWith(eq("Franklin"), any(Pageable.class));
+		verify(this.owners, times(3)).findByLastNameStartingWithAndCity(eq("Franklin"), any(), any(Pageable.class));
 	}
 
 	@Test
 	void processFindFormWithWhitespaceOnlyLastNameReturnsAllOwners() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
-		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameStartingWithAndCity(eq(""), any(), any(Pageable.class))).thenReturn(tasks);
 
 		mockMvc.perform(get("/owners?page=1").param("lastName", "   "))
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"));
 
-		verify(this.owners).findByLastNameStartingWith(eq(""), any(Pageable.class));
+		verify(this.owners).findByLastNameStartingWithAndCity(eq(""), any(), any(Pageable.class));
 	}
 
 	@Test
 	void processFindFormNoOwnersFound() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of());
-		when(this.owners.findByLastNameStartingWith(eq("Unknown Surname"), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameStartingWithAndCity(eq("Unknown Surname"), any(), any(Pageable.class)))
+			.thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Unknown Surname"))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeHasFieldErrors("owner", "lastName"))

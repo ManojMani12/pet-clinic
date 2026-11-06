@@ -20,6 +20,8 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Repository class for <code>Owner</code> domain objects. All method names are compliant
@@ -43,6 +45,21 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * found)
 	 */
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+
+	/**
+	 * Retrieve {@link Owner}s whose last name <i>starts</i> with the given name and, when
+	 * {@code city} is not null, whose city equals it (case-insensitive).
+	 * @param lastName Value to search for
+	 * @param city optional city to match exactly, ignoring case; null for any city
+	 * @return a page of matching {@link Owner}s
+	 */
+	@Query("""
+			SELECT o FROM Owner o
+			WHERE o.lastName LIKE CONCAT(:lastName, '%')
+			AND (:city IS NULL OR LOWER(o.city) = LOWER(:city))
+			""")
+	Page<Owner> findByLastNameStartingWithAndCity(@Param("lastName") String lastName, @Param("city") String city,
+			Pageable pageable);
 
 	/**
 	 * Retrieve an {@link Owner} from the data store by id.

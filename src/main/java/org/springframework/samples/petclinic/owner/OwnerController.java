@@ -92,8 +92,9 @@ class OwnerController {
 	}
 
 	@GetMapping("/owners")
-	public String processFindForm(@RequestParam(defaultValue = "1") int page, Owner owner, BindingResult result,
-			Model model, RedirectAttributes redirectAttributes) {
+	public String processFindForm(@RequestParam(defaultValue = "1") int page,
+			@RequestParam(required = false) String city, Owner owner, BindingResult result, Model model,
+			RedirectAttributes redirectAttributes) {
 		// allow parameterless GET request for /owners to return all records
 		String lastName = owner.getLastName();
 		if (lastName == null) {
@@ -103,12 +104,18 @@ class OwnerController {
 			lastName = lastName.strip();
 		}
 
-		// find owners by last name
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
+		// optional city filter; blank means no city filter
+		city = (city == null || city.isBlank()) ? null : city.strip();
+
+		// find owners by last name and optional city
+		Page<Owner> ownersResults = findPaginatedForOwners(page, lastName, city);
 		if (page < 1 || page > Math.max(ownersResults.getTotalPages(), 1)) {
 			redirectAttributes.addAttribute("page", 1);
 			if (!lastName.isEmpty()) {
 				redirectAttributes.addAttribute("lastName", lastName);
+			}
+			if (city != null) {
+				redirectAttributes.addAttribute("city", city);
 			}
 			return "redirect:/owners";
 		}
@@ -126,24 +133,25 @@ class OwnerController {
 		}
 
 		// multiple owners found
-		return addPaginationModel(page, lastName, model, ownersResults);
+		return addPaginationModel(page, lastName, city, model, ownersResults);
 	}
 
-	private String addPaginationModel(int page, String lastName, Model model, Page<Owner> paginated) {
+	private String addPaginationModel(int page, String lastName, String city, Model model, Page<Owner> paginated) {
 		List<Owner> listOwners = paginated.getContent();
 		model.addAttribute("currentPage", page);
 		model.addAttribute("lastName", lastName);
+		model.addAttribute("city", city == null ? "" : city);
 		model.addAttribute("totalPages", paginated.getTotalPages());
 		model.addAttribute("totalItems", paginated.getTotalElements());
 		model.addAttribute("listOwners", listOwners);
 		return "owners/ownersList";
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
+	private Page<Owner> findPaginatedForOwners(int page, String lastName, String city) {
 		int pageSize = 5;
 		int validatedPage = Math.max(page, 1);
 		Pageable pageable = PageRequest.of(validatedPage - 1, pageSize);
-		return owners.findByLastNameStartingWith(lastname, pageable);
+		return owners.findByLastNameStartingWithAndCity(lastName, city, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
