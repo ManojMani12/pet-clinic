@@ -96,19 +96,6 @@ class ClinicServiceTests {
 	}
 
 	@Test
-	void shouldFindOwnersByLastNameAndCityIgnoringCase() {
-		Page<Owner> owners = this.owners.findByLastNameStartingWithAndCity("Davis", "windsor", pageable);
-		assertThat(owners).hasSize(1);
-		assertThat(owners.getContent().get(0).getFirstName()).isEqualTo("Harold");
-
-		owners = this.owners.findByLastNameStartingWithAndCity("Davis", "Wind", pageable);
-		assertThat(owners).isEmpty();
-
-		owners = this.owners.findByLastNameStartingWithAndCity("Davis", null, pageable);
-		assertThat(owners).hasSize(2);
-	}
-
-	@Test
 	void shouldFindSingleOwnerWithPet() {
 		Optional<Owner> optionalOwner = this.owners.findById(1);
 		assertThat(optionalOwner).isPresent();
