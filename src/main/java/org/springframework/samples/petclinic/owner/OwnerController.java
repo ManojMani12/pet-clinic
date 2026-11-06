@@ -91,7 +91,7 @@ class OwnerController {
 
 	@GetMapping
 	public String processFindForm(@ModelAttribute Owner owner, BindingResult result, Model model,
-			@GetMapping(name = "page") Optional<Integer> page) {
+			@ModelAttribute("page") Optional<Integer> page) {
 		String lastName = StringUtils.hasText(owner.getLastName()) ? owner.getLastName() : "";
 		String city = StringUtils.hasText(owner.getCity()) ? owner.getCity().trim() : "";
 		if (city.isEmpty()) {
