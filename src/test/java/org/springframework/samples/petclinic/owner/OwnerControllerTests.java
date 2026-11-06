@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -34,6 +35,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
@@ -228,6 +230,18 @@ class OwnerControllerTests {
 
 		verify(this.owners, never()).findByLastNameStartingWithAndCityIgnoreCase(anyString(), anyString(),
 				any(Pageable.class));
+	}
+
+	@Test
+	void processFindFormUsesDefaultPageSize() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
+		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
+
+		mockMvc.perform(get("/owners").param("page", "1")).andExpect(status().isOk());
+
+		ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+		verify(this.owners).findByLastNameStartingWith(eq(""), captor.capture());
+		assertThat(captor.getValue().getPageSize()).isEqualTo(5);
 	}
 
 	@Test

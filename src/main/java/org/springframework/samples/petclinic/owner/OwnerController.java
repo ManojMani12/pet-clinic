@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,8 +53,11 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository owners) {
+	private final int pageSize;
+
+	public OwnerController(OwnerRepository owners, @Value("${petclinic.owners.pageSize:5}") int pageSize) {
 		this.owners = owners;
+		this.pageSize = pageSize;
 	}
 
 	@InitBinder
@@ -146,7 +150,6 @@ class OwnerController {
 	}
 
 	private Page<Owner> findPaginatedForOwners(int page, String lastname, String city) {
-		int pageSize = 5;
 		int validatedPage = Math.max(page, 1);
 		Pageable pageable = PageRequest.of(validatedPage - 1, pageSize);
 		if (city.isEmpty()) {
