@@ -1,61 +1,79 @@
 <!DOCTYPE html>
-
-<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
-
+<html th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
 <body>
 
-  <h2 th:text="#{owners}">Owners</h2>
+  <h2 th:text="#{owners.list.heading}">Owners</h2>
+
+  <div th:if="${(!#strings.isEmpty(lastName) || !#strings.isEmpty(city))}" class="owners-search-context">
+    <p>
+      <span th:text="#{owners.search.context.prefix}">Results for</span>
+      <span th:if="${!#strings.isEmpty(lastName)}">
+        <span th:text="#{owners.search.context.lastName}">last name starts with</span>:
+        <strong th:text="${lastName}">Franklin</strong>
+      </span>
+      <span th:if="${!#strings.isEmpty(city)}">
+        <span th:if="${!#strings.isEmpty(lastName)}">&nbsp;(&nbsp;</span>
+        <span th:text="#{owners.search.context.city}">City</span>:
+        <strong th:text="${city}">Madison</strong>
+        <span th:if="${!#strings.isEmpty(lastName)}">&nbsp;)&nbsp;</span>
+      </span>
+    </p>
+    <p>
+      <a class="btn btn-default" th:href="@{/owners/find(lastName=${lastName}, city=${city})}" th:text="#{owners.search.backToSearch}">
+        Back to Search
+      </a>
+      <a class="btn btn-default" th:href="@{/owners(page=1)}" th:text="#{owners.search.clearFilter}">
+        Clear Filter
+      </a>
+    </p>
+  </div>
 
   <table id="owners" class="table table-striped">
     <thead>
       <tr>
-        <th th:text="#{name}" style="width: 150px;">Name</th>
-        <th th:text="#{address}" style="width: 200px;">Address</th>
-        <th th:text="#{city}">City</th>
-        <th th:text="#{telephone}" style="width: 120px">Telephone</th>
-        <th th:text="#{pets}">Pets</th>
+        <th style="width: 150px;" th:text="#{owner.name}">Name</th>
+        <th style="width: 200px;" th:text="#{owner.address}">Address</th>
+        <th th:text="#{owner.city}">City</th>
+        <th style="width: 120px" th:text="#{owner.telephone}">Telephone</th>
+        <th style="width: 120px" th:text="#{owner.pets}">Pets</th>
       </tr>
     </thead>
     <tbody>
       <tr th:each="owner : ${listOwners}">
         <td>
-          <a th:href="@{/owners/__${owner.id}__}" th:text="${owner.firstName + ' ' + owner.lastName}" /></a>
+          <a th:href="@{/owners/__${owner.id}__}" th:text="${owner.firstName + ' ' + owner.lastName}" />
         </td>
         <td th:text="${owner.address}" />
         <td th:text="${owner.city}" />
         <td th:text="${owner.telephone}" />
-        <td><span th:text="${#strings.listJoin(owner.pets, ', ')}" /></td>
+        <td>
+          <span th:each="pet : ${owner.pets}" th:text="${pet.name}" th:remove="tag">
+            Rob
+          </span>
+        </td>
       </tr>
     </tbody>
   </table>
-  <div th:if="${totalPages > 1}">
-    <span th:text="#{pages}">Pages:</span>
-    <span>[</span>
-    <span th:each="i: ${#numbers.sequence(1, totalPages)}">
-      <a th:if="${currentPage != i}" th:href="@{'/owners?page=' + ${i}}">[[${i}]]</a>
-      <span th:unless="${currentPage != i}">[[${i}]]</span>
-    </span>
-    <span>]&nbsp;</span>
-    <span>
-      <a th:if="${currentPage > 1}" th:href="@{'/owners?page=1'}" th:title="#{first}" class="fa fa-fast-backward"></a>
-      <span th:unless="${currentPage > 1}" th:title="#{first}" class="fa fa-fast-backward"></span>
-    </span>
-    <span>
-      <a th:if="${currentPage > 1}" th:href="@{'/owners?page=__${currentPage - 1}__'}" th:title="#{previous}"
-        class="fa fa-step-backward"></a>
-      <span th:unless="${currentPage > 1}" th:title="#{previous}" class="fa fa-step-backward"></span>
-    </span>
-    <span>
-      <a th:if="${currentPage < totalPages}" th:href="@{'/owners?page=__${currentPage + 1}__'}" th:title="#{next}"
-        class="fa fa-step-forward"></a>
-      <span th:unless="${currentPage < totalPages}" th:title="#{next}" class="fa fa-step-forward"></span>
-    </span>
-    <span>
-      <a th:if="${currentPage < totalPages}" th:href="@{'/owners?page=__${totalPages}__'}" th:title="#{last}"
-        class="fa fa-fast-forward"></a>
-      <span th:unless="${currentPage < totalPages}" th:title="#{last}" class="fa fa-fast-forward"></span>
-    </span>
-  </div>
-</body>
 
+  <div class="row">
+    <div class="col-sm-6">
+      <div th:if="${totalPages > 0}">
+        <ul class="pagination">
+          <li th:classappend="${currentPage == 1} ? 'disabled'">
+            <a th:href="@{/owners(page=${currentPage - 1}, lastName=${lastName}, city=${city}, size=${size})}">&laquo;</a>
+          </li>
+
+          <li th:each="i : ${#numbers.sequence(1, totalPages)}" th:classappend="${i == currentPage} ? 'active'">
+            <a th:href="@{/owners(page=${i}, lastName=${lastName}, city=${city}, size=${size})}" th:text="${i}">1</a>
+          </li>
+
+          <li th:classappend="${currentPage == totalPages} ? 'disabled'">
+            <a th:href="@{/owners(page=${currentPage + 1}, lastName=${lastName}, city=${city}, size=${size})}">&raquo;</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</body>
 </html>
