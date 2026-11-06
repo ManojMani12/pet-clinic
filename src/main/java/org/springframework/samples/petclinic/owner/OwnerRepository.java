@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,65 +15,53 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.util.Optional;
+import java.util.Collection;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
-/**
- * Repository class for <code>Owner</code> domain objects. All method names are compliant
- * with Spring Data naming conventions so this interface can easily be extended for Spring
- * Data. See:
- * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories.query-methods.query-creation
- *
- * @author Ken Krebs
- * @author Juergen Hoeller
- * @author Sam Brannen
- * @author Michael Isvy
- * @author Wick Dynex
- */
-public interface OwnerRepository extends JpaRepository<Owner, Integer> {
+public interface OwnerRepository extends Repository<Owner, Integer> {
 
 	/**
-	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
-	 * whose last name <i>starts</i> with the given name.
+	 * Retrieve {@link Owner}s from the data store by last name.
 	 * @param lastName Value to search for
 	 * @return a Collection of matching {@link Owner}s (or an empty Collection if none
 	 * found)
 	 */
+	@Query("SELECT DISTINCT owner FROM Owner owner left join fetch owner.pets WHERE owner.lastName LIKE :lastName%")
+	Collection<Owner> findByLastName(@Param("lastName") String lastName);
+
+	/**
+	 * Retrieve {@link Owner}s from the data store by last name, returning all owners whose last
+	 * name <i>starts</i> with the given input.
+	 * @param lastName last name prefix.
+	 * @param pageable paging information.
+	 * @return a page of {@link Owner}s.
+	 */
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
 
 	/**
-	 * Retrieve {@link Owner}s whose last name <i>starts</i> with the given name and, when
-	 * {@code city} is not null, whose city equals it (case-insensitive).
-	 * @param lastName Value to search for
-	 * @param city optional city to match exactly, ignoring case; null for any city
-	 * @return a page of matching {@link Owner}s
+	 * Retrieve {@link Owner}s by lastName prefix and an optional city filter.
+	 * <p>
+	 * lastName prefix match is case-insensitive, and city is matched as a
+	 * case-insensitive exact match when provided.
+	 * <p>
+	 * Note: The lastName prefix uses LIKE with explicit escaping. The caller must
+	 * escape user-provided input for LIKE using backslash escaping.
 	 */
-	@Query("""
-			SELECT o FROM Owner o
-			WHERE o.lastName LIKE CONCAT(:lastName, '%')
-			AND (:city IS NULL OR LOWER(o.city) = LOWER(:city))
-			""")
+	@Query("select o from Owner o "
+			+ "where lower(o.lastName) like lower(concat(:lastName,'%')) escape '\\' "
+			+ "and (:city = '' or lower(o.city) = lower(:city))")
 	Page<Owner> findByLastNameStartingWithAndCity(@Param("lastName") String lastName, @Param("city") String city,
 			Pageable pageable);
 
-	/**
-	 * Retrieve an {@link Owner} from the data store by id.
-	 * <p>
-	 * This method returns an {@link Optional} containing the {@link Owner} if found. If
-	 * no {@link Owner} is found with the provided id, it will return an empty
-	 * {@link Optional}.
-	 * </p>
-	 * @param id the id to search for
-	 * @return an {@link Optional} containing the {@link Owner} if found, or an empty
-	 * {@link Optional} if not found.
-	 * @throws IllegalArgumentException if the id is null (assuming null is not a valid
-	 * input for id)
-	 */
-	Optional<Owner> findById(Integer id);
+	Owner findById(int id);
+
+	void save(Owner owner);
+
+	Collection<Owner> findAll();
 
 }
