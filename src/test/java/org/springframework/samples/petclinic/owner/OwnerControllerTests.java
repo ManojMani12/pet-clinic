@@ -44,6 +44,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -231,8 +232,7 @@ class OwnerControllerTests {
 			.thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Fr").param("city", "  Madison  "))
 			.andExpect(status().isOk());
-		verify(this.owners).findByLastNameStartingWithAndCityIgnoreCase(eq("Fr"), eq("Madison"),
-				any(Pageable.class));
+		verify(this.owners).findByLastNameStartingWithAndCityIgnoreCase(eq("Fr"), eq("Madison"), any(Pageable.class));
 	}
 
 	@Test
@@ -246,9 +246,20 @@ class OwnerControllerTests {
 
 	@Test
 	void processFindFormRedirectKeepsCity() throws Exception {
+		when(this.owners.findByLastNameStartingWithAndCityIgnoreCase(eq("Franklin"), eq("Madison"),
+				any(Pageable.class)))
+			.thenReturn(new PageImpl<>(List.of(george())));
 		mockMvc.perform(get("/owners").param("page", "2").param("lastName", "Franklin").param("city", "Madison"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl("/owners?page=1&lastName=Franklin&city=Madison"));
+	}
+
+	@Test
+	void processFindFormUsesDefaultPageSizeOfFive() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk());
+		verify(this.owners).findByLastNameStartingWith(eq(""), argThat(p -> p.getPageSize() == 5));
 	}
 
 	@Test

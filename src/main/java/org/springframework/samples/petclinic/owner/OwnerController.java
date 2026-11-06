@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -50,10 +51,19 @@ class OwnerController {
 
 	private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
 
+	private static final int DEFAULT_PAGE_SIZE = 5;
+
+	private static final int MAX_PAGE_SIZE = 100;
+
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository owners) {
+	private final int pageSize;
+
+	public OwnerController(OwnerRepository owners,
+			@Value("${petclinic.owners.pageSize:" + DEFAULT_PAGE_SIZE + "}") int pageSize) {
 		this.owners = owners;
+		// fall back to the default for invalid values, and cap overly large values
+		this.pageSize = pageSize <= 0 ? DEFAULT_PAGE_SIZE : Math.min(pageSize, MAX_PAGE_SIZE);
 	}
 
 	@InitBinder
@@ -147,9 +157,8 @@ class OwnerController {
 	}
 
 	private Page<Owner> findPaginatedForOwners(int page, String lastname, String city) {
-		int pageSize = 5;
 		int validatedPage = Math.max(page, 1);
-		Pageable pageable = PageRequest.of(validatedPage - 1, pageSize);
+		Pageable pageable = PageRequest.of(validatedPage - 1, this.pageSize);
 		if (city.isEmpty()) {
 			return owners.findByLastNameStartingWith(lastname, pageable);
 		}
